@@ -185,9 +185,14 @@ export function populateRooms(layout,seed=layout.seed){
    .sort((a,b)=>b.score-a.score);
   for(const {a} of ranked){
    if(objects.length>=target)break;
-   const max=({plant:2,lighting:2,diningChair:4,chair:3,computer:2,storage:2})[a.role]||1;
+   const max=({plant:3,lighting:3,diningChair:4,chair:3,computer:2,storage:2,decoration:2,media:2})[a.role]||1;
    if((counts[a.role]||0)>=max)continue;
-   add(a);
+   if(!add(a) && a.w>.55 && a.d>.55){
+    // Secondary props may be compact, but never distort their proportions.
+    for(const factor of [.84,.72]){
+     if(add({...a,w:a.w*factor,d:a.d*factor,h:a.h*factor}))break;
+    }
+   }
   }
   room.furnitureCount=objects.length;
   room.placementDensity=+(objects.length/room.area).toFixed(2);
