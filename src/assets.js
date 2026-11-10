@@ -86,7 +86,7 @@ export function addFurniture(group,spec,owned,onProgress=()=>{}) {
  loadGLB(FURNITURE_BASE+spec.model+'.glb').then((gltf)=>{
    if(!holder.parent)return;
    const target=normalized(gltf.scene,spec.h,{w:spec.w,d:spec.d});
-   target.position.y=0;
+   // Keep the bounding-box floor offset applied by normalized().
    holder.remove(standIn);
    holder.add(target);
    onProgress(true);
