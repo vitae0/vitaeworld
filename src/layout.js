@@ -282,6 +282,23 @@ function placeFurniture(layout,rng) {
  }
  function add(room,a,semanticScore,mandatory=false){
    const siblings=placed.filter(p=>p.roomId===room.id);
+   // Small objects with a clear support relationship are placed ON the parent mesh.
+   // The parent's footprint, not an unrelated random floor location, determines x/z.
+   const supports=a.role==='computer'?
+     siblings.filter(p=>p.role==='desk'):
+     a.role==='kitchenTool'?siblings.filter(p=>p.role==='counter'||p.role==='storage'):
+     a.model==='lampsquaretable'?siblings.filter(p=>p.role==='sidetable'):[];
+   const surface=supports.find(p=>p.w>a.w*.9&&p.d>a.d*.9);
+   if(surface){
+     placed.push({id:room.id+'-'+placed.length,model:a.model,
+       x:surface.x,z:surface.z,w:a.w,d:a.d,modelW:a.w,modelD:a.d,
+       h:a.h,angle:surface.angle,solid:false,roomId:room.id,role:a.role,
+       semanticScore:+semanticScore.toFixed(3),
+       y:surface.y+surface.h*.96,mandatory,supportedBy:surface.id});
+     return true;
+   }
+   // An unsupported computer/coffee-maker would float, so omit it.
+   if(a.role==='computer'||a.role==='kitchenTool'||a.model==='lampsquaretable')return false;
    let best=null,bestScore=-Infinity;
    for(const p of generatePositions(room,a)){
      if(!footprintAllowed(room,p.x,p.z,p.w,p.d))continue;
