@@ -30,6 +30,15 @@
      <input id="seed" spellcheck="false" autocomplete="off" value="vitae-001">
      <button id="random" class="iconButton" title="Rastgele seed" aria-label="Rastgele seed">⟳</button>
     </div>
+    <label class="formLabel buildingLabel" for="buildingStyle">BUILDING ARCHITECTURE</label>
+    <select id="buildingStyle" aria-label="Building architecture">
+      <option value="auto">AUTO · SEED DECIDES</option>
+      <option value="compact">COMPACT · SMALL RESIDENCE</option>
+      <option value="central">CENTRAL · ATRIUM & LOBBY</option>
+      <option value="grid">GRID · URBAN FLOORPLAN</option>
+      <option value="courtyard">COURTYARD · LOOPED GALLERY</option>
+      <option value="branched">WINGS · CONNECTED PLAN</option>
+    </select>
     <button id="generate" class="primaryButton">↗ &nbsp; GENERATE INTERIOR</button>
     <div class="splitStats">
      <div><small>ROOMS</small><strong id="roomTotal">6</strong></div>
@@ -53,6 +62,7 @@
     <strong id="currentRoom">SERPENTINE HALL</strong><div id="roomTraits" class="roomTraits">MULTIPLE CORRIDOR LOOPS · 40D + 16D</div>
     <div class="mapDivider"></div>
     <div class="kv"><span>WORLD SEED</span><b id="seedText">VITAE-001</b></div>
+    <div class="kv"><span>BUILDING</span><b id="buildingName">AUTO</b></div>
     <div class="kv"><span>PALETTE</span><b id="paletteName">AURORA</b></div>
     <div class="kv"><span>CAMERA</span><b id="viewLabel">THIRD PERSON</b></div>
     <div class="kv"><span>CHARACTER</span><b id="avatarLabel">QUATERNIUS</b></div>
