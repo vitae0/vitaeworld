@@ -1,24 +1,24 @@
-# VitaeWorld | Semantic Architecture Lab 02
+# VitaeWorld | Spatial Architecture Lab 03
 
-**A browser-first 3D world prototype** with reproducible, deliberately varied interiors. This repository is independent of the earlier Vitae Hotel tests.
+Browser-first 3D world experiment, completely independent from earlier Vitae Hotel prototypes.
 
-**Live site (GitHub Pages, when Pages is enabled):** https://vitae0.github.io/vitaeworld/
+**Playable GitHub Pages build:** https://vitae0.github.io/vitaeworld/
 
-## What's implemented
+## What's new in Lab 03
 
-- A procedural **serpentine corridor** with varying turns, a widened hub, side branches, architectural recesses and small courtyard voids.
-- Six connected rooms chosen from **11 manually designed archetypes**, with variable irregular footprints, sizes and facade setbacks. The room types are no longer confined to six fixed boxes.
-- A **40-dimensional, hand-scored semantic feature vector for each of 61 CC0 furniture models**. Each room type has its own independent 40-D target profile.
-- Deterministic room selection and placement. Required items establish a usable core; optional props are scored for semantic similarity, role diversity and spatial compatibility. Wall and centre anchors, real bounding footprints, door clearance, non-overlap and furniture companions constrain the result.
-- Furnishings come from Kenney CC0 GLBs. Two CC0 stylized character prototypes, keyboard and touch controls, first/third person camera, and an accurate room-shape minimap.
-- Instanced floors, ceilings, walls and trim for lower 3D draw-call overhead.
-- Regression tests across 46 seeds for connectivity, room essentials and collisions.
+The old oversized, straight-corridor layout is replaced with **16 smaller rooms** (usually about **20–41 m²**) around a genuinely connected multi-loop circulation network:
 
-This is **constraint-guided procedural generation**, not a trained generative neural network. Seed randomness chooses among valid options, never replaces furniture compatibility rules.
+- Two longitudinal and two transverse corridors with multiple intersections and walkable loops.
+- Two side connector corridors, a shared middle lobby, and an inner open-air atrium.
+- Compact rooms with **45° chamfered walls**, generated as real angled wall meshes and physics obstacles.
+- **40-dimensional functional vectors** for 61 CC0 furniture items and 11 room archetypes.
+- A separate **16-dimensional placement vector per item** describing wall, corner, centre, entrance, deep/private zones, daylight, partner-facing, social grouping, and safe clearances.
+- Denser, less arbitrary furniture arrangements. Mandatory items establish each space's purpose; relationship rules place desks/chairs, dining sets, sofas/coffee tables, and computers or table lamps on support furniture. The placement score chooses among valid physical positions rather than randomly scattering objects.
+- A compact multi-loop minimap, first/third person camera, two temporary stylized CC0 character prototypes, and desktop/mobile controls.
 
-## Run locally
+## Run
 
-Node.js 20.19+ and npm:
+Requires Node.js 20.19+ and npm:
 
 ```bash
 npm install
@@ -27,31 +27,24 @@ npm test
 npm run build
 ```
 
-**Desktop:** WASD or arrows to move; mouse drag / Capture Mouse to look; Shift sprint; V first/third person; R regenerate; Escape release pointer lock. **Mobile:** left joystick, swipe to look and CAM to switch view.
+**Desktop:** WASD / arrow keys move, mouse drag or Capture Mouse to look, Shift sprint, V toggles first/third person, R generates a new seed, Escape releases the pointer lock. **Touch:** left joystick, drag-to-look, CAM button.
 
-Enter an arbitrary seed and press **Generate Interior**. The same seed regenerates the same building, irrespective of device or order of previous seeds.
+Re-enter the same world seed for a byte-for-byte reproducible world layout and furniture arrangement. Different seeds change zoning, use mix, courtyard/entry details, chamfer positions, material palettes, and the furnishing choices.
 
-## How to change the design without AI
+## Modules
 
-The key data file is [`src/semantics.js`](src/semantics.js). To change a room's personality, edit the `traits` map in `ROOM_TYPES`. To change how an item is used, edit its record in `FURNITURE`:
+- `src/semantics.js` — editable 40D functional and 16D positional vectors for the entire furniture catalogue.
+- `src/topology.js` — multi-loop hallways, compact room polygons approximated on a grid, actual 45° wall segments, collision geometry and door selection.
+- `src/placement.js` — candidate placement, functional compatibility, spatial scores, companion clusters, clearance checks and supports.
+- `src/layout.js` — stable public layout API composing architecture and placement.
+- `src/world.js` — instanced floors, 3D walls, ceilings, trims and lighting.
+- `src/assets.js` — licensed remote GLB cache, material handling and simple fallbacks.
+- `src/controls.js` — first/third-person controls and collision-aware motion.
+- `src/main.js` — rendering orchestration, minimap and UI.
+- `tests/layout.test.mjs` — 61-seed layout, loop, doorway, vector, 45° angle and furniture regressions.
 
-```js
-// A lounge chair is not just "a random chair".
-asset('loungechair',0.98,0.99,0.98,'corner','chair',
-  {lounge:3,recovery:2,soft:2,quiet:2})
-```
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for formulas, constraints, extension points and known limitations. See [ASSETS.md](ASSETS.md) for model licensing and provenance.
 
-`src/layout.js` handles floor plans, scoring, room connectivity, wall generation, candidate placements and collisions. `src/world.js` only renders the resulting layout. `src/assets.js` handles GLB loading/caching. No hardcoded positions are required to add another room theme. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for exact algorithms.
+## Known limits
 
-## Caveats / next milestones
-
-- Irregular geometry is currently built from a two-metre occupancy grid, not freeform polygon or curved walls.
-- The building is a single storey. Doors are open structural gaps; no moving door physics or stairs.
-- Paths around furniture are validated at door entries and by collision footprints, but full object-level navmesh verification is a future upgrade.
-- Semantic vectors are human-authored heuristics: their dimensions and values can be adjusted and need playtesting.
-- Assets are currently fetched from pinned public CC0 GLB sources. Self-hosted, precompressed meshes are a later production step.
-- The 3D browser interaction still needs visual testing across real devices even when automated builds pass.
-
-## Licensing
-
-See [`ASSETS.md`](ASSETS.md) for external models and CC0 provenance.
+This is still a proof of concept, not a finished furnished-home designer. Rooms are rectangular parcels with selected chamfered corners, not full freeform curved polygons. Structural doors are pass-through openings; furniture physics and camera collisions are coarse footprint tests, not a full navmesh. A guaranteed visual quality bar requires browser screenshots/playtesting. We currently fetch pinned CC0 GLBs from public endpoints; future production needs compressed local assets and meshes pooled by type. There are no stairs, multiple storeys, interactions, city streaming, or multiplayer yet.
