@@ -1,29 +1,45 @@
 # VitaeWorld · Procedural Interiors Lab
 
-Browser-first 3D world experiment, **independent from the earlier Vitae Hotel prototype**.
+Experimental, browser-first 3D world. This repository is **independent of the older Vitae Hotel test**.
 
-The first milestone generates a connected building interior from deterministic seeds. Interior geometry is procedural; furnishings are real CC0 GLB models from Kenney, and a stylized character uses a CC0 model from Quaternius. The renderer uses Three.js ES modules, with no application build step.
+The current prototype has six connected room types in a shared building, seed-based assignment, doorway and furniture collision footprints, first-person / third-person cameras, a stylized CC0 GLB avatar, an alternate animated stylized avatar, a top-down minimap, mobile controls, and imported Kenney CC0 GLB furniture. Room geometry is created in Three.js; GLB objects are fetched from revision-pinned public URLs with local fallbacks.
 
 ## Run
 
-Start a local HTTP server from the repository root:
+Requires Node.js 20.19+ and npm:
 
-```sh
-python3 -m http.server 8000
+```bash
+npm install
+npm run dev
 ```
 
-Open http://localhost:8000. Opening the HTML directly as `file://` will not work reliably with modules.
+Open the local URL printed by Vite. To verify layout tests and build:
+
+```bash
+npm test
+npm run build
+npm run preview
+```
+
+A Vite build emits `dist/`, which can be deployed to Vercel, Netlify or other static hosting. External character/furniture models require Internet access.
 
 ## Controls
 
-- WASD / arrow keys: walk
-- Mouse drag on scene: look around; click **Capture mouse** for pointer lock
-- Shift: sprint
-- V: first/third-person toggle
-- R: generate a new layout
-- Escape: release pointer lock
-- On touch: left joystick + drag-to-look, camera/generate buttons
+**Desktop:** WASD or arrow keys to move; mouse drag or **Capture Mouse** to orbit/look; Shift to sprint; **V** to switch first/third-person; **R** to regenerate; Escape to release pointer lock. In third person the avatar maintains its heading when idle, regardless of camera orbit.
 
-The layout code and asset registry are separated so new room recipes, buildings and object packs can be added without altering the renderer. See [ASSETS.md](ASSETS.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+**Mobile:** left joystick moves; drag the main scene to look around; the **CAM** button changes perspective.
 
-_Note: the first release deliberately uses remote GitHub-hosted CC0 models for an easy-to-preview proof of concept. For production, vendor and optimize the models; external hosts are not a guaranteed uptime or versioning contract._
+Use the seed input and **Generate Interior** to repeat a deterministic room arrangement. **Change Avatar** toggles between licensed stylized placeholder characters; **Change Material Palette** changes room colours.
+
+## Architecture
+
+- `src/layout.js`: reproducible rooms, layouts, walls, prop recipes, collisions.
+- `src/world.js`: 3D architectural meshes, material palettes, lighting.
+- `src/assets.js`: GLB cache, real model loading, normalisation, fallback assets.
+- `src/controls.js`: movement, first/third-person cameras, touch controls.
+- `src/main.js`: UI, mini-map, lifecycle and render loop.
+- `tests/`: invariant tests.
+
+**Current limitation:** seed variation rearranges six predesigned room recipes on a fixed footprint; this is not yet arbitrary building synthesis. Character locomotion, room subdivision, navigation/physics, new floor plans and street/city generation follow after the interior experiment is stable.
+
+See [ASSETS.md](ASSETS.md) for licensing/provenance and [architecture notes](docs/ARCHITECTURE.md) for the roadmap.
