@@ -175,7 +175,7 @@ export function populateRooms(layout,seed=layout.seed){
      modelW:a.w,modelD:a.d,h:a.h,angle:best.angle,
      solid:a.solid,roomId:room.id,role:a.role,
      semanticScore:+semantic.toFixed(3),locationScore:+best.locationScore.toFixed(3),
-     mandatory,y:.1,faceTarget:matches.length?matches[0].id:null};
+     mandatory,y:.1,faceTarget:objects.find(q=>q.role===companion(a))?.id??null};
    }
    spec.id=room.id+'-'+placed.length;
    placed.push(spec);objects.push(spec);
