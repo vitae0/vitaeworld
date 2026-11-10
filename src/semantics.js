@@ -123,7 +123,7 @@ const MODEL_LOCATION={
  kitchenfridge:{corner:3,entry:2},
  toilet:{privacy:3,deep:3},
  bathtub:{privacy:3,deep:3},
- televisionsmodern:{focal:3},
+ televisionmodern:{focal:3},
  lamproundfloor:{corner:3,perimeter:3},
  lampsquarefloor:{corner:3,perimeter:3},
  bookcaseopen:{perimeter:3,corner:2},
