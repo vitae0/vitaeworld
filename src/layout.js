@@ -296,7 +296,7 @@ function placeFurniture(layout,rng) {
    const floatingRole=a.role==='computer'||a.role==='kitchenTool'||a.role==='mirror';
    const y=floatingRole?(a.role==='mirror'?1.08:0.86):0.1;
    const spec={id:room.id+'-'+placed.length,model:a.model,x:best.x,z:best.z,
-     w:best.w,d:best.d,h:a.h,angle:best.angle,solid:a.solid,
+     w:best.w,d:best.d,modelW:a.w,modelD:a.d,h:a.h,angle:best.angle,solid:a.solid,
      roomId:room.id,role:a.role,semanticScore:+semanticScore.toFixed(3),y,
      mandatory};
    placed.push(spec);
