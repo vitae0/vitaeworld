@@ -25,7 +25,8 @@ test('40D function and 16D placement vectors survive architecture changes',()=>{
 });
 test('rotations match -Z front and compensate imported model-native axes',()=>{
  const o={x:0,z:0};
- assert.deepEqual(forwardFromYaw(0),{x:0,z:-1});
+ assert.ok(Math.abs(forwardFromYaw(0).x)<1e-12);
+ assert.equal(forwardFromYaw(0).z,-1);
  assert.ok(Math.abs(forwardFromYaw(Math.PI/2).x+1)<1e-10);
  for(const p of [{x:3,z:0},{x:-3,z:0},{x:0,z:3},{x:0,z:-3}]){
   const yaw=cardinalToward(o,p);
