@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ROOM_THEMES,TILE,WALL_HEIGHT} from './layout.js';
+import {ROOM_THEMES,TILE,WALL_HEIGHT,GRID_W,GRID_H} from './layout.js';
 import {addFurniture} from './assets.js';
 
 const PALETTES=[
@@ -101,7 +101,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
    const candidate=room.cells.find(c=>{
      const {gx,gz}=c;
      const n=room.side==='north'?gz-1:gz+1;
-     return n>=0&&n<15&&layout.grid[n*21+gx]===-1;
+     return n<0||n>=GRID_H||layout.grid[n*GRID_W+gx]===-1;
    });
    if(!candidate)continue;
    const z=candidate.z+(room.side==='north'?-TILE/2+.095:TILE/2-.095);
