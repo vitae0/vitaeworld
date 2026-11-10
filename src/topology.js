@@ -65,7 +65,7 @@ function topologicalGrid(rng,style){
  }else if(style==='central'){
   x0=1;x1=23;z0=1;z1=17;
   fillRect(11,12,z0,z1);fillRect(x0,x1,8,9);
-  fillRect(8,15,5,12); // spacious central lobby instead of another corridor
+  fillRect(9,14,6,11); // compact atrium lobby keeps the adjacent rooms usable
   atrium={x:0,z:0,kind:'lobby'};
  }else if(style==='grid'){
   fillRect(7,8,z0,z1);fillRect(16,17,z0,z1);
