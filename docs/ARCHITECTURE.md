@@ -1,67 +1,43 @@
-# Lab 03: topology, spatial vectors and dense object groups
+# VitaeWorld Lab 04: multi-grammar architecture and explicit facing
 
-## Design principle
+## 1. Architecture families
 
-A useful procedural interior is not "place a random object in a random empty cell". It is a cascade of **architectural grammar → room functions → semantic furniture → spatial location → physical clearance → correct orientation and relationship**. Every stage has independent code and can be changed without a generative AI model.
+All five families are selected by the `BUILDING_TYPES` registry in `src/topology.js`. Inputs to `generateLayout(seed,type)` are pure and deterministic.
 
-## 1. Multi-loop building topology
+- **compact:** x=4..20, z=3..15, one horizontal and one vertical 2-cell corridor. Small footprint, eight compact rooms.
+- **central:** large x=1..23, z=1..17 footprint, main cross and a widened central lobby. Additional secondary routes across the lobby.
+- **grid:** full 25×19 footprint with two vertical and two horizontal 2-cell corridors, generating regularly subdivided bays.
+- **courtyard:** grid connections with the central bay opened into a walkable gallery ringing a genuine exterior void.
+- **branched:** central east/west corridor with two connected lateral side wings and cross-links.
 
-`src/topology.js` owns a fixed-footprint 25 × 19-cell grid at 1.3 metres per cell. Two 2-cell-wide north/south axes intersect two 2-cell-wide east/west axes. Side passages link these main axes in two extra places, and the central shared lobby wraps an open-air courtyard. The resulting circulation graph contains several genuine cycles, so players have alternative routes instead of one long hallway.
+The generator starts with the *circulation* graph, not with randomly sized rooms. Connected components of leftover interior space are divided recursively only when both new components remain connected, both have direct access to the hallway, and a minimum occupancy constraint is satisfied. Every room has an actual door aperture on a valid hallway edge. `bevelCorners` trims eligible orthogonal corners and replaces the wall sections with true 45° meshes and collision segments, keeping doorways intact.
 
-The eight remaining region bays are subdivided into compact room parcels, for 16 room IDs. Each receives an accessible doorway on a real corridor edge. Room functional types are independently seeded and chosen from 11 archetypes, with repeats allowed. Room sizes are typically 20–41 m². A deterministic rejection/check stage validates circulation connectivity. The output includes occupancy grid, wall segments, doors, room rectangles, floor tiles, spawn, and a full set of navigation blockers.
+## 2. Furniture type and position are separate
 
-### Diagonal wall geometry
+Each Kenney-derived model has a human-authored 40D function vector `f` and a separately authored 16D spatial vector `p`. Function matching: `cosine(furnitureVector, roomVector)`. Spatial matching: `cosine(locationVector, features(room, candidate, objects, door))`.
 
-`bevelCorners()` finds convex room corners bordering two exposed wall edges, trims both adjacent straight wall segments by a cut distance, and inserts a **diagonal wall segment at exactly 45°**. The renderer transforms the resulting segment around the Y axis; movement checks point-to-segment distance on the same angled obstacle. A door is never shortened to create a bevel. We currently bevel some corners, not all edges, to avoid noisy or overly jagged architectural silhouettes.
+Location features encode perimeter, corner, centre, entrance, room depth, daylight, privacy, left/right, focal relationships, grouping, clearance, quiet/public, view direction and surface preference.
 
-## 2. 40D semantic + 16D placement vectors
+Candidates are sampled around walls, centre locations and existing objects they are meant to accompany. Directional objects now receive all four cardinal yaw options on centre positions (previously most were given yaw=0 automatically). Semantic direction and partner direction are incorporated into an additive facing score. For example, a desk chair should face its desk; a screen should face the seating group.
 
-`src/semantics.js` describes 61 CC0 objects and 11 room archetypes using a human-authored functional vector `f ∈ [0,3]^40`, for sleep, work, cooking, social interaction, material style, etc.
+The physical rotation of a GLB model is a separate transformation from the logical rotation. `orientation.js` treats canonical world-facing as **-Z**, implements yaw-to-target and cardinal aiming, and supplies an editable asset-specific GLB yaw compensation applied inside the model wrapper. This makes it possible to correct a mesh's local front without rewriting room placement or collision logic. The pack-wide front assumption must be visually validated, and any exceptions recorded as per-model overrides.
 
-Each furniture item *also* has a location vector `p ∈ [0,3]^16` with these stable dimensions:
+## 3. True room-footprint collision checks
 
-```text
-perimeter  corner   central  entry
-deep       daylight privacy  left
-right      focal    cluster  clearance
-quiet      public   view     surface
-```
+Earlier irregular rooms could have an L-shaped set of cells but an enclosing rectangular `xMin/xMax/zMin/zMax`. A prop might have fit the rectangle while actually landing inside an adjacent hallway or room.
 
-Role defaults are explicitly authored and each model inherits them, optionally overriding its own scores. All vectors are directly inspectable and editable. This is a rule-based design grammar, not a pretrained embedding model.
+The new `fits` check samples the **entire oriented AABB** of every proposed furniture item, including corners, and rejects any part falling into cells not owned by that room. Corner chamfers, door-throat buffers, proximity to solid furniture and surface-parent constraints are separately enforced. Child props on desks and tables also check their offset's actual cell ownership, falling back to the parent's centre if necessary.
 
-Functional compatibility uses cosine similarity:
+These checks are deliberately conservative: some otherwise attractive arrangements will be rejected before they can break navigation or render through a wall.
 
-`S_function(a,r) = cosine(a.functionVector,r.targetVector)`
+## 4. Scene/UI and optimization
 
-Candidates are scored using room-relative geometry (distance from walls, corners, entrance, room centre, outdoor façade), partner proximity, grouping and current orientation:
+`src/world.js` transforms architecture outputs into instanced floors, walls, ceiling tiles, trims and accent lighting. The minimap and wall physics use the same topology. `src/main.js` exposes an Auto/Compact/Central/Grid/Courtyard/Wings dropdown, and reports the actual style on the HUD.
 
-`S_location(a,x) = cosine(a.locationVector,features(x,room,objects,door))`
+Rendering keeps the existing device-pixel-ratio caps, shared GLB model cache and few realtime lights. Repeated geometry is instanced; future work includes merged static room props, downloaded/optimized local GLBs, LOD and robust avatar physics.
 
-The placement objective uses
+## 5. Validation and limitations
 
-`3.1*S_location + 1.45*partnerFit + groupBonus + anchorBonus + tinyDeterministicTieBreak`
+`tests/layout.test.mjs` verifies deterministic generation, all five explicitly chosen architectural styles and automatically selected styles, non-disconnected hallways, open doors, 45° geometry, actual room ownership of props, mandatory furniture and non-overlap of solid furniture. Test coverage does **not** replace a screenshot-based browser review, especially for decorative facings, camera sightlines, animation loops and meshes with unusual local axes.
 
-Functional similarity selects *which* objects to consider; spatial preference selects *where* each model fits. Larger weights can be adjusted in `src/placement.js`.
-
-## 3. Relationship-aware furniture placement
-
-1. Guarantee mandatory use-defining furniture, scaling evenly (not stretching) to 90%, 80%, 70% or 60% only when necessary.
-2. Sample wall/corner and centre candidates, and additional positions near existing companion pieces.
-3. Reject any candidate that breaches room footprint, a diagonal wall chamfer, door throat, or another solid object with a safe margin. Rugs may underlay furniture.
-4. Evaluate the 16D location vector, partner distance and orientation. A chair aims toward its table; sofas prefer wall edges and face into the room; screens prefer walls opposite seating.
-5. Parent small computer accessories and bedside table lamps to desk/table surfaces, preventing floating devices.
-6. Fill remaining space with a ranked, diversified mix of furniture, compact accessories, plants, lighting and floor décor until the room density target or safe-placement limit is reached.
-
-The architecture assigns model-space dimensions independently from rotated collision footprints, so a 90° chair turn does not corrupt its physical footprint.
-
-## 4. Performance
-
-The scene still uses WebGL/Three.js and Vite. Floors, roofs, wall segments and trims render through shared instanced geometry. Walls, doors and diagonal physics come from the same generated topology, so a decorative angled wall cannot become a collision-only or visual-only obstacle. Asset requests are cached and revision-pinned. Pixels and realtime lights are budgeted.
-
-## 5. Limitations and next upgrades
-
-- **Geometry:** chamfered rectangular parcels and tiled corridors; true curved or polygon-clipped room floors are not yet implemented.
-- **Navmesh:** graph-level hall and doorway connectivity is tested, but the full clearance graph around every item, and full capsule physics, are not yet certified.
-- **Aesthetics:** semantic weights are hand-authored hypotheses. They should be tuned from screenshots and actual playtesting, not assumed visually perfect.
-- **Furniture:** we use existing CC0 models, not custom design meshes or fine-grained LOD. Live GLB requests need local vendoring and compression.
-- **Next milestones:** visual scene inspector, furniture clustering with explicit facing/spacing constraints, curved walls and varying ceiling heights, doors and interactive props, stairs and multi-storey circulation, then procedural external city blocks.
+Next improvements should focus on per-asset rotation calibration, a spatial composition inspector, larger scale structural grammar variants, stairs and multiple floors, and streaming this architecture into city parcels.
