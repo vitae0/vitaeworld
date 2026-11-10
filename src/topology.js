@@ -44,7 +44,7 @@ function reachableCells(grid,id){
 }
 function topologicalGrid(rng){
  const grid=new Array(GRID_W*GRID_H).fill(OUTSIDE);
- const xc=[7+Math.floor(rng()*2),16+Math.floor(rng()*2)];
+ const xc=[7+Math.floor(rng()*2),16];
  const zc=[5+Math.floor(rng()*2),12+Math.floor(rng()*2)];
  const bx=[[0,xc[0]-1],[xc[0]+2,xc[1]-1],[xc[1]+2,GRID_W-1]];
  const bz=[[0,zc[0]-1],[zc[0]+2,zc[1]-1],[zc[1]+2,GRID_H-1]];
