@@ -1,5 +1,6 @@
 import {FURNITURE,FURNITURE_BY_ID,ROOM_TYPES,furnitureScore,LOCATION_DIMENSIONS} from './semantics.js';
 import {TILE,GRID_W,GRID_H,seededRandom} from './topology.js';
+import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
 
 // A 16D location vector and relational rules, independent of visual rendering.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -72,7 +73,7 @@ function candidatePositions(room,a,others,layout){
  for(const parent of partners){
   for(const direction of [[1,0],[-1,0],[0,1],[0,-1]]){
    const x=parent.x+direction[0]*ideal(a),z=parent.z+direction[1]*ideal(a);
-   const ang=Math.round(angleTowards({x,z},parent)/(Math.PI/2))*(Math.PI/2);
+   const ang=cardinalToward({x,z},parent);
    add(x,z,ang,'group');
   }
  }
@@ -90,8 +91,12 @@ function candidatePositions(room,a,others,layout){
      c.z+dz*side+(dx!==0?off:0),angle,'wall');
    }
   }
-  if(a.anchor!=='wall')for(const [ox,oz] of [[0,0],[.25,0],[-.25,0],[0,.25],[0,-.25]])
-   add(c.x+ox,c.z+oz,0,'center');
+  if(a.anchor!=='wall')for(const [ox,oz] of [[0,0],[.25,0],[-.25,0],[0,.25],[0,-.25]]){
+   // Every central directional object can face all four sides. Previously they
+   // were stuck at yaw=0 and often faced away from their real furniture partner.
+   for(const yaw of (DIRECTIONAL_ROLES.has(a.role)?CARDINAL_YAWS:[0]))
+    add(c.x+ox,c.z+oz,yaw,'center');
+  }
  }
  return result;
 }
@@ -153,7 +158,15 @@ export function populateRooms(layout,seed=layout.seed){
      const positional=locationScore(a,room,p,objects,door,layout);
      const matches=objects.filter(q=>q.role===companion(a));
      const companionFit=matches.length?clamp(1-Math.abs(Math.min(...matches.map(q=>distance(q,p)))-ideal(a))/3):0;
+     const focus=matches.length?
+       matches.reduce((best,q)=>distance(q,p)<distance(best,p)?q:best):room;
+     // Favor intentional sight-lines. Desks should face their chair where possible,
+     // seating should face a table or the room centre, TVs face their sofas, etc.
+     const target=focus;
+     const directional=DIRECTIONAL_ROLES.has(a.role);
+     const face=directional?facingScore(p.angle,p,target):.5;
      const score=3.1*positional+1.45*companionFit+
+       (directional?.95*face:0)+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
      if(score>bestScore){best=p;bestScore=score;best.locationScore=positional;}
     }
@@ -162,7 +175,7 @@ export function populateRooms(layout,seed=layout.seed){
      modelW:a.w,modelD:a.d,h:a.h,angle:best.angle,
      solid:a.solid,roomId:room.id,role:a.role,
      semanticScore:+semantic.toFixed(3),locationScore:+best.locationScore.toFixed(3),
-     mandatory,y:.1};
+     mandatory,y:.1,faceTarget:matches.length?matches[0].id:null};
    }
    spec.id=room.id+'-'+placed.length;
    placed.push(spec);objects.push(spec);
