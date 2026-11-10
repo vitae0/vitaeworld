@@ -79,13 +79,13 @@ function placeholder(spec,owned) {
 }
 export function addFurniture(group,spec,owned,onProgress=()=>{}) {
  const holder=new THREE.Group();
- holder.position.set(spec.x,0.1,spec.z);
+ holder.position.set(spec.x,spec.y??0.1,spec.z);
  holder.rotation.y=spec.angle||0;
  const standIn=placeholder(spec,owned);
  holder.add(standIn);group.add(holder);
  loadGLB(FURNITURE_BASE+spec.model+'.glb').then((gltf)=>{
    if(!holder.parent)return;
-   const target=normalized(gltf.scene,spec.h,{w:spec.w,d:spec.d});
+   const target=normalized(gltf.scene,spec.h,{w:spec.modelW??spec.w,d:spec.modelD??spec.d});
    // Keep the bounding-box floor offset applied by normalized().
    holder.remove(standIn);
    holder.add(target);
