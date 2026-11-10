@@ -118,6 +118,12 @@ function drawMap(){
  ctx.globalAlpha=1;
  ctx.strokeStyle='#1b3b44';ctx.lineWidth=1;
  for(const wall of layout.walls){
+   if(wall.kind==='diagonal'){
+     const a=mapPoint(wall.ax,wall.az),b=mapPoint(wall.bx,wall.bz);
+     ctx.strokeStyle='#d6e7e6';ctx.lineWidth=1.3;
+     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+     continue;
+   }
    if(wall.kind!=='wall')continue;
    const a=mapPoint(wall.x-wall.w/2,wall.z-wall.d/2);
    const b=mapPoint(wall.x+wall.w/2,wall.z+wall.d/2);
