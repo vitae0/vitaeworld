@@ -85,3 +85,11 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
 
 .layoutValue{font-size:11px!important;letter-spacing:.65px;color:#b1e9d8;display:inline-block;margin-top:6px}
 .roomTraits{font-size:9px;color:#9ad6cd;letter-spacing:.55px;line-height:1.5;margin-top:9px;min-height:28px}
+
+/* Architectural grammar picker keeps seed/style independent. */
+.buildingLabel{margin-top:16px}
+#buildingStyle{width:100%;pointer-events:auto;display:block;padding:11px 10px;
+ background:#102734;color:#dff4ed;border:1px solid #456672;border-radius:7px;
+ font-size:10px;letter-spacing:1.1px;font-weight:700;outline:none;cursor:pointer}
+#buildingStyle:focus{border-color:#a6f9d9}
+#buildingStyle option{background:#102734;color:#e8fff5}
