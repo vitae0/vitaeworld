@@ -56,7 +56,7 @@ function generate(nextSeed){
  $('#seedText').textContent=seed.toUpperCase();
  $('#roomTotal').textContent=layout.rooms.length;
  $('#propTotal').textContent=layout.props.length;
- $('#layoutStatus').textContent='IRREGULAR';
+ $('#layoutStatus').textContent='LOOPS';
  $('#paletteName').textContent=world.paletteName.toUpperCase();
  updateProgress();
  drawMap();
@@ -132,9 +132,8 @@ function drawMap(){
  for(const room of layout.rooms){
    ctx.font='bold 8px system-ui';ctx.textAlign='center';ctx.fillStyle='#0c2630';
    const center=mapPoint(room.x,room.z);
-   const label=room.name.replace('Conversation ','').replace('Reading ','')
-     .replace('Social ','').replace('Wellness ','').replace('Creative ','');
-   ctx.fillText(label.toUpperCase(),center.x,center.y,60);
+   // 16 compact rooms need concise IDs; full names remain in the status card.
+   ctx.fillText(String(room.id).padStart(2,'0'),center.x,center.y,23);
  }
  for(const d of layout.doors){
    const p=mapPoint(d.x,d.z);
@@ -163,9 +162,10 @@ function updateLocation(){
  if(traits){
    traits.textContent=room
      ?Object.entries(ROOM_TYPES[room.type].traits)
-       .sort((a,b)=>b[1]-a[1]).slice(0,4)
-       .map(([key,val])=>key.toUpperCase()+' '+val).join(' · ')
-     :'CONNECTED WINGS · 40D SEMANTIC ROOMS';
+       .sort((a,b)=>b[1]-a[1]).slice(0,3)
+       .map(([key,val])=>key.toUpperCase()+' '+val).join(' · ')+
+       ' · '+room.furnitureCount+' OBJECTS'
+     :'MULTIPLE CORRIDOR LOOPS · 40D + 16D';
  }
 }
 function loop(){
