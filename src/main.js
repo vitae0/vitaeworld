@@ -17,8 +17,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x08151d);
 scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
-let seed='vitae-001',paletteIndex=0,characterIndex=0,qualityChanged=false;
-let layout=generateLayout(seed),world=null,controller=null,avatar=null;
+let seed='vitae-001',paletteIndex=0,characterIndex=0,buildingStyle='auto';
+let layout=generateLayout(seed,buildingStyle),world=null,controller=null,avatar=null;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
 const clock=new THREE.Clock();
 let frames=0,lastFPS=0;
@@ -40,7 +40,7 @@ function createAvatar(){
 }
 function generate(nextSeed){
  seed=String(nextSeed).trim()||'vitae-001';
- layout=generateLayout(seed);
+ layout=generateLayout(seed,buildingStyle);
  const generation=++generationId;
  world?.dispose();
  totalAssets=layout.props.length;loadedAssets=0;failedAssets=0;
@@ -56,7 +56,8 @@ function generate(nextSeed){
  $('#seedText').textContent=seed.toUpperCase();
  $('#roomTotal').textContent=layout.rooms.length;
  $('#propTotal').textContent=layout.props.length;
- $('#layoutStatus').textContent='LOOPS';
+ $('#layoutStatus').textContent=layout.buildingType.toUpperCase();
+ $('#buildingName').textContent=layout.buildingName.toUpperCase();
  $('#paletteName').textContent=world.paletteName.toUpperCase();
  updateProgress();
  drawMap();
@@ -75,6 +76,10 @@ function toggleView(){
 function newSeed(){
  return Math.random().toString(36).slice(2,8);
 }
+$('#buildingStyle').addEventListener('change',e=>{
+ buildingStyle=e.currentTarget.value;
+ generate(seed);
+});
 $('#generate').addEventListener('click',()=>generate($('#seed').value));
 $('#random').addEventListener('click',()=>generate(newSeed()));
 $('#seed').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generate(e.target.value);e.target.blur();}});
