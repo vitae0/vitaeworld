@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="tr">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+ <meta name="theme-color" content="#071721">
+ <meta name="description" content="VitaeWorld procedural interiors: browser-first modular 3D world laboratory.">
+ <title>VitaeWorld · Procedural Interiors Lab</title>
+ <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+ <canvas id="scene" aria-label="VitaeWorld 3D sahnesi"></canvas>
+ <main id="interface">
+  <header class="topbar">
+   <div class="brand">
+    <div class="emblem"><span>V</span></div>
+    <div><strong>VITAE<span>WORLD</span></strong><small>PROCEDURAL INTERIORS / LAB 01</small></div>
+   </div>
+   <div class="topStatus">
+    <span class="statusDot"></span> <span>EXPERIMENTAL BUILD</span>
+    <span class="statusDivider"></span><span id="fps">-- FPS</span>
+   </div>
+  </header>
+  <aside class="leftPane glass">
+    <div class="eyebrow">WORLD GENERATOR <span>01 / INTERIORS</span></div>
+    <h1>Every room,<br><em>a new possibility.</em></h1>
+    <p class="intro">Bağlantılı mekânlar, modüler objeler ve gerçek CC0 3D modellerle oluşturulan prosedürel bir bina.</p>
+    <label class="formLabel" for="seed">WORLD SEED</label>
+    <div class="seedRow">
+     <input id="seed" spellcheck="false" autocomplete="off" value="vitae-001">
+     <button id="random" class="iconButton" title="Rastgele seed" aria-label="Rastgele seed">⟳</button>
+    </div>
+    <button id="generate" class="primaryButton">↗ &nbsp; GENERATE INTERIOR</button>
+    <div class="splitStats">
+     <div><small>ROOMS</small><strong id="roomTotal">6</strong></div>
+     <div><small>OBJECTS</small><strong id="propTotal">—</strong></div>
+     <div><small>LAYOUT</small><strong>01</strong></div>
+    </div>
+    <div class="eyebrow sectionEyebrow">ENVIRONMENT</div>
+    <div class="actionRow">
+      <button id="viewButton" class="lineButton">1ST PERSON</button>
+      <button id="character" class="lineButton">CHANGE AVATAR</button>
+    </div>
+    <button id="palette" class="lineButton full">◈ &nbsp; CHANGE MATERIAL PALETTE</button>
+    <div class="assetStatus"><span id="assetStatus">LOADING MODELS</span><span id="avatarState">AVATAR LOADING</span></div>
+    <div class="progress"><div id="assetFill"></div></div>
+    <div class="credit">CC0 ASSETS · KENNEY / QUATERNIUS / KAYKIT</div>
+  </aside>
+  <aside class="rightPane glass">
+    <div class="paneTop"><span>FLOOR PLAN</span><span class="miniBadge">LIVE</span></div>
+    <canvas id="minimap" width="240" height="195" aria-label="Bina kat planı"></canvas>
+    <div class="currentCaption">CURRENT SPACE</div>
+    <strong id="currentRoom">CENTRAL HALL</strong>
+    <div class="mapDivider"></div>
+    <div class="kv"><span>WORLD SEED</span><b id="seedText">VITAE-001</b></div>
+    <div class="kv"><span>PALETTE</span><b id="paletteName">AURORA</b></div>
+    <div class="kv"><span>CAMERA</span><b id="viewLabel">THIRD PERSON</b></div>
+    <div class="kv"><span>CHARACTER</span><b id="avatarLabel">QUATERNIUS</b></div>
+  </aside>
+  <div class="crosshair" aria-hidden="true"><i></i><i></i></div>
+  <div class="bottomBar">
+    <div class="hint"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> MOVE
+      <span class="separator">·</span><span class="kbd wide">SHIFT</span> SPRINT
+      <span class="separator">·</span><span class="kbd">V</span> CAMERA
+      <span class="separator">·</span><span class="kbd">R</span> REGENERATE</div>
+    <button id="capture">⊕ &nbsp; CAPTURE MOUSE</button>
+  </div>
+  <div class="touchUI">
+    <div id="touchPad"><div id="thumb"></div></div>
+    <button id="mobileView" aria-label="Kamerayı değiştir">◉<small>CAM</small></button>
+  </div>
+ </main>
+ <script type="module" src="/src/main.js"></script>
+</body>
+</html>
