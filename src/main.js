@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {generateLayout,isWalkable} from './layout.js';
+import {generateLayout,GRID_W,GRID_H,TILE,worldCell} from './layout.js';
+import {ROOM_TYPES} from './semantics.js';
 import {buildWorld} from './world.js';
 import {CHARACTERS,addCharacter} from './assets.js';
 import {Controller} from './controls.js';
@@ -18,7 +19,7 @@ scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
 let seed='vitae-001',paletteIndex=0,characterIndex=0,qualityChanged=false;
 let layout=generateLayout(seed),world=null,controller=null,avatar=null;
-let totalAssets=0,loadedAssets=0,failedAssets=0;
+let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
 const clock=new THREE.Clock();
 let frames=0,lastFPS=0;
 function resize(){
@@ -40,9 +41,11 @@ function createAvatar(){
 function generate(nextSeed){
  seed=String(nextSeed).trim()||'vitae-001';
  layout=generateLayout(seed);
+ const generation=++generationId;
  world?.dispose();
  totalAssets=layout.props.length;loadedAssets=0;failedAssets=0;
  world=buildWorld(scene,layout,paletteIndex,(ok)=>{
+   if(generation!==generationId)return;
    if(ok)loadedAssets++;else failedAssets++;
    updateProgress();
  });
@@ -53,6 +56,7 @@ function generate(nextSeed){
  $('#seedText').textContent=seed.toUpperCase();
  $('#roomTotal').textContent=layout.rooms.length;
  $('#propTotal').textContent=layout.props.length;
+ $('#layoutStatus').textContent='IRREGULAR';
  $('#paletteName').textContent=world.paletteName.toUpperCase();
  updateProgress();
  drawMap();
@@ -91,32 +95,72 @@ document.addEventListener('keydown',e=>{
  if(e.code==='KeyR'){e.preventDefault();generate(newSeed());}
 });
 const map=$('#minimap'),ctx=map.getContext('2d');
-function mapPoint(x,z){return {x:9+(x+13.7)/27.4*222,y:9+(z+11.2)/22.4*177};}
+const cellSize=Math.min((map.width-16)/GRID_W,(map.height-16)/GRID_H);
+const mapOffsetX=(map.width-GRID_W*cellSize)/2;
+const mapOffsetY=(map.height-GRID_H*cellSize)/2;
+function mapPoint(x,z){
+ return {
+   x:mapOffsetX+(x-layout.bounds.minX)/TILE*cellSize,
+   y:mapOffsetY+(z-layout.bounds.minZ)/TILE*cellSize
+ };
+}
 function drawMap(){
  const w=map.width,h=map.height;
- ctx.clearRect(0,0,w,h);ctx.fillStyle='#09212d';ctx.fillRect(0,0,w,h);
- for(const room of layout.rooms){
-  const p=mapPoint(room.xMin,room.zMin),q=mapPoint(room.xMax,room.zMax);
-  ctx.fillStyle='#234354';ctx.fillRect(p.x,p.y,q.x-p.x,q.y-p.y);
-  ctx.strokeStyle='rgba(182,220,213,.3)';ctx.lineWidth=1;
-  ctx.strokeRect(p.x,p.y,q.x-p.x,q.y-p.y);
-  ctx.font='9px system-ui';ctx.textAlign='center';ctx.fillStyle='#d4f1ea';
-  const c=mapPoint(room.x,room.z);ctx.fillText(room.name.replace('Creative ','').toUpperCase(),c.x,c.y);
+ ctx.clearRect(0,0,w,h);
+ ctx.fillStyle='#09212d';ctx.fillRect(0,0,w,h);
+ for(const c of layout.floors){
+   const p=mapPoint(c.x-TILE/2,c.z-TILE/2);
+   const room=layout.rooms.find(r=>r.id===c.roomId);
+   ctx.fillStyle=c.roomId===0?'#346477':room?ROOM_TYPES[room.type].color:'#1a3a4b';
+   ctx.globalAlpha=c.roomId===0?.72:.62;
+   ctx.fillRect(p.x,p.y,cellSize+.28,cellSize+.28);
  }
- const hall1=mapPoint(-13.5,-2),hall2=mapPoint(13.5,2);
- ctx.fillStyle='#346376';ctx.fillRect(hall1.x,hall1.y,hall2.x-hall1.x,hall2.y-hall1.y);
+ ctx.globalAlpha=1;
+ ctx.strokeStyle='#1b3b44';ctx.lineWidth=1;
+ for(const wall of layout.walls){
+   if(wall.kind!=='wall')continue;
+   const a=mapPoint(wall.x-wall.w/2,wall.z-wall.d/2);
+   const b=mapPoint(wall.x+wall.w/2,wall.z+wall.d/2);
+   ctx.strokeRect(a.x,a.y,Math.max(b.x-a.x,.35),Math.max(b.y-a.y,.35));
+ }
+ for(const room of layout.rooms){
+   ctx.font='bold 8px system-ui';ctx.textAlign='center';ctx.fillStyle='#0c2630';
+   const center=mapPoint(room.x,room.z);
+   const label=room.name.replace('Conversation ','').replace('Reading ','')
+     .replace('Social ','').replace('Wellness ','').replace('Creative ','');
+   ctx.fillText(label.toUpperCase(),center.x,center.y,60);
+ }
  for(const d of layout.doors){
-  const p=mapPoint(d.x,d.z);ctx.fillStyle='#a5f8de';ctx.fillRect(p.x-8,p.y-2,16,4);
+   const p=mapPoint(d.x,d.z);
+   ctx.strokeStyle='#ddfff0';ctx.lineWidth=2.4;
+   ctx.beginPath();
+   if(d.axis==='x'){ctx.moveTo(p.x-7,p.y);ctx.lineTo(p.x+7,p.y);}
+   else{ctx.moveTo(p.x,p.y-7);ctx.lineTo(p.x,p.y+7);}
+   ctx.stroke();
  }
  const p=mapPoint(controller.position.x,controller.position.z);
- ctx.fillStyle='#fff8d8';ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle='#fff8d8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x,p.y);
- ctx.lineTo(p.x-Math.sin(controller.heading)*11,p.y-Math.cos(controller.heading)*11);ctx.stroke();
+ ctx.fillStyle='#fff8d8';
+ ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#fff8d8';ctx.lineWidth=2;
+ ctx.beginPath();ctx.moveTo(p.x,p.y);
+ ctx.lineTo(p.x-Math.sin(controller.heading)*11,p.y-Math.cos(controller.heading)*11);
+ ctx.stroke();
 }
 function updateLocation(){
  const p=controller.position;
- const room=layout.rooms.find(r=>p.x>r.xMin+0.2&&p.x<r.xMax-0.2&&p.z>r.zMin+0.2&&p.z<r.zMax-0.2);
- $('#currentRoom').textContent=room?room.name.toUpperCase():'CENTRAL HALL';
+ const {gx,gz}=worldCell(p.x,p.z);
+ const id=gx>=0&&gx<GRID_W&&gz>=0&&gz<GRID_H?
+   layout.grid[gz*GRID_W+gx]:-1;
+ const room=layout.rooms.find(r=>r.id===id);
+ $('#currentRoom').textContent=room?room.name.toUpperCase():'SERPENTINE HALL';
+ const traits=$('#roomTraits');
+ if(traits){
+   traits.textContent=room
+     ?Object.entries(ROOM_TYPES[room.type].traits)
+       .sort((a,b)=>b[1]-a[1]).slice(0,4)
+       .map(([key,val])=>key.toUpperCase()+' '+val).join(' · ')
+     :'CONNECTED WINGS · 40D SEMANTIC ROOMS';
+ }
 }
 function loop(){
  requestAnimationFrame(loop);
