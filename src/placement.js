@@ -194,6 +194,23 @@ export function populateRooms(layout,seed=layout.seed){
     }
    }
   }
+  // Secondary dressing layer: smaller, functional accents reduce empty corners
+  // without inserting extra large pieces or violating the room's intended use.
+  const smallAccents=FURNITURE
+   .filter(a=>!used.has(a.model)&&
+     ['plant','lighting','rug','decoration','media'].includes(a.role)&&
+     furnitureScore(a,type,counts)>.36)
+   .sort((a,b)=>b.role==='plant'&&a.role!=='plant'?1:
+     a.role==='plant'&&b.role!=='plant'?-1:
+     (a.w*a.d-b.w*b.d));
+  for(const a of smallAccents){
+   if(objects.length>=target)break;
+   if((counts[a.role]||0)>=({plant:4,lighting:4,rug:1,decoration:2,media:2})[a.role])continue;
+   if(add(a))continue;
+   for(const factor of [.76,.62]){
+    if(add({...a,w:a.w*factor,d:a.d*factor,h:a.h*factor}))break;
+   }
+  }
   room.furnitureCount=objects.length;
   room.placementDensity=+(objects.length/room.area).toFixed(2);
  }
