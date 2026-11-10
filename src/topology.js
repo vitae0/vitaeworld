@@ -42,68 +42,137 @@ function reachableCells(grid,id){
  }
  return seen.size;
 }
-function topologicalGrid(rng){
+export const BUILDING_TYPES=Object.freeze({
+ compact:{name:'Compact Residence',description:'Small footprint, short cross circulation',targetRooms:8,maxRoomCells:31},
+ central:{name:'Central Atrium',description:'Large shared centre and radial circulation',targetRooms:11,maxRoomCells:29},
+ grid:{name:'Urban Grid',description:'Regular intersecting streets and corridors',targetRooms:16,maxRoomCells:27},
+ courtyard:{name:'Courtyard Loop',description:'Rings around an open-air courtyard',targetRooms:14,maxRoomCells:27},
+ branched:{name:'Connected Wings',description:'Short side wings with a connected spine',targetRooms:12,maxRoomCells:29}
+});
+export const BUILDING_TYPE_IDS=Object.freeze(Object.keys(BUILDING_TYPES));
+function topologicalGrid(rng,style){
  const grid=new Array(GRID_W*GRID_H).fill(OUTSIDE);
- const xc=[7+Math.floor(rng()*2),16];
- const zc=[5+Math.floor(rng()*2),12+Math.floor(rng()*2)];
- const bx=[[0,xc[0]-1],[xc[0]+2,xc[1]-1],[xc[1]+2,GRID_W-1]];
- const bz=[[0,zc[0]-1],[zc[0]+2,zc[1]-1],[zc[1]+2,GRID_H-1]];
  const hall=(x,z)=>{if(inside(x,z))grid[idx(x,z)]=HALL;};
- for(let z=0;z<GRID_H;z++)for(let x=0;x<GRID_W;x++){
-  if(x===xc[0]||x===xc[0]+1||x===xc[1]||x===xc[1]+1||
-     z===zc[0]||z===zc[0]+1||z===zc[1]||z===zc[1]+1)hall(x,z);
+ const fillRect=(x0,x1,z0,z1,fn=hall)=>{
+  for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++)fn(x,z);
+ };
+ const cfg=BUILDING_TYPES[style];
+ if(!cfg)throw Error('Unknown building style: '+style);
+ let x0=0,x1=GRID_W-1,z0=0,z1=GRID_H-1,atrium=null;
+ if(style==='compact'){
+  x0=4;x1=20;z0=3;z1=15;
+  fillRect(11,12,z0,z1);fillRect(x0,x1,8,9);
+ }else if(style==='central'){
+  x0=1;x1=23;z0=1;z1=17;
+  fillRect(11,12,z0,z1);fillRect(x0,x1,8,9);
+  fillRect(8,15,5,12); // spacious central lobby instead of another corridor
+  atrium={x:0,z:0,kind:'lobby'};
+ }else if(style==='grid'){
+  fillRect(7,8,z0,z1);fillRect(16,17,z0,z1);
+  fillRect(x0,x1,5,6);fillRect(x0,x1,12,13);
+ }else if(style==='courtyard'){
+  fillRect(7,8,z0,z1);fillRect(16,17,z0,z1);
+  fillRect(x0,x1,5,6);fillRect(x0,x1,12,13);
+  // A genuine outdoor opening surrounded by a corridor ring.
+  fillRect(9,15,7,11);
+  fillRect(10,14,8,10,(x,z)=>{grid[idx(x,z)]=OUTSIDE;});
+  atrium={x:0,z:0,kind:'open-air'};
+ }else if(style==='branched'){
+  x0=1;x1=23;z0=2;z1=16;
+  fillRect(x0,x1,8,9);
+  fillRect(6,7,4,13);fillRect(16,17,4,13);
+  fillRect(7,16,4,5);fillRect(7,16,12,13);
  }
- // A central hall loop around an open air well is connected to every spine.
- for(let z=bz[1][0];z<=bz[1][1];z++)for(let x=bx[1][0];x<=bx[1][1];x++)hall(x,z);
- const xMid=Math.floor((bx[1][0]+bx[1][1])/2);
- const zMid=Math.floor((bz[1][0]+bz[1][1])/2);
- for(let z=zMid;z<=zMid+1;z++)for(let x=xMid;x<=xMid+1;x++)grid[idx(x,z)]=OUTSIDE;
- // Independent side connectors make additional route loops.
- const spurs=[];
- for(const col of [0,2]){
-   const [minX,maxX]=bx[col],x=Math.floor((minX+maxX)/2);
-   spurs.push(x);
-   for(let z=bz[1][0];z<=bz[1][1];z++)hall(x,z);
- }
- const regions=[];
- for(let rz=0;rz<3;rz++)for(let rx=0;rx<3;rx++){
-  if(rx===1&&rz===1)continue;
-  const [x0,x1]=bx[rx], [z0,z1]=bz[rz];
-  let ranges;
-  if(rz===1){
-    const cut=spurs[rx===0?0:1];
-    ranges=[[x0,cut-1],[cut+1,x1]];
-  }else{
-    const width=x1-x0+1;
-    const cut=x0+Math.floor(width/2)-1;
-    ranges=[[x0,cut],[cut+1,x1]];
+ // Each component not already circulation is a room candidate.
+ // Subdivide oversized bays only when BOTH resulting rooms can open on a corridor.
+ const components=[],seen=new Set();
+ for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++){
+  const i=idx(x,z);
+  if(grid[i]!==OUTSIDE||seen.has(i))continue;
+  const nodes=[{gx:x,gz:z}],queue=[i];
+  seen.add(i);
+  for(let at=0;at<queue.length;at++){
+   const k=queue[at],px=k%GRID_W,pz=Math.floor(k/GRID_W);
+   for(const {dx,dz} of DIRS){
+    const nx=px+dx,nz=pz+dz;
+    if(nx<x0||nx>x1||nz<z0||nz>z1)continue;
+    const n=idx(nx,nz);
+    if(grid[n]===OUTSIDE&&!seen.has(n)){
+     seen.add(n);queue.push(n);nodes.push({gx:nx,gz:nz});
+    }
+   }
   }
-  for(const [ax,bx1] of ranges){
-   if(bx1-ax+1<2)throw Error('Room bay too narrow');
-   regions.push({minGX:ax,maxGX:bx1,minGZ:z0,maxGZ:z1,rx,rz});
-  }
+  components.push(nodes);
  }
- const chosen=shuffle(Object.keys(ROOM_TYPES),rng);
- const rooms=[];
- regions.forEach((r,i)=>{
+ const connected=(cells)=>{
+  if(!cells.length)return false;
+  const ids=new Set(cells.map(c=>idx(c.gx,c.gz)));
+  const visited=new Set([idx(cells[0].gx,cells[0].gz)]),todo=[cells[0]];
+  for(let p=0;p<todo.length;p++){
+   const c=todo[p];
+   for(const {dx,dz} of DIRS){
+    const key=idx(c.gx+dx,c.gz+dz);
+    if(ids.has(key)&&!visited.has(key)){
+     visited.add(key);todo.push({gx:c.gx+dx,gz:c.gz+dz});
+    }
+   }
+  }
+  return visited.size===cells.length;
+ };
+ const hasDoor=(cells)=>cells.some(c=>DIRS.some(({dx,dz})=>{
+  const x=c.gx+dx,z=c.gz+dz;
+  return inside(x,z)&&grid[idx(x,z)]===HALL;
+ }));
+ function trySplit(cells){
+  const xs=cells.map(c=>c.gx),zs=cells.map(c=>c.gz);
+  const rangeX=Math.max(...xs)-Math.min(...xs),rangeZ=Math.max(...zs)-Math.min(...zs);
+  const options=[];
+  for(const axis of (rangeX>rangeZ?['gx','gz']:['gz','gx'])){
+   const values=cells.map(c=>c[axis]),a=Math.min(...values),b=Math.max(...values);
+   for(let cut=a+1;cut<b;cut++){
+    const left=cells.filter(c=>c[axis]<=cut),right=cells.filter(c=>c[axis]>cut);
+    if(Math.min(left.length,right.length)<8 || !hasDoor(left)||!hasDoor(right))continue;
+    if(!connected(left)||!connected(right))continue;
+    // Balance room sizes and prefer to avoid skinny one-cell strips.
+    const sizeBias=Math.abs(left.length-right.length)*.06;
+    const widthPenalty=Math.max(0,2-(cut-a))*1.2+Math.max(0,2-(b-cut))*1.2;
+    options.push({left,right,score:sizeBias+widthPenalty+rng()*.1});
+   }
+  }
+  options.sort((a,b)=>a.score-b.score);
+  return options[0]||null;
+ }
+ let roomsCells=components;
+ for(let attempt=0;attempt<36;attempt++){
+  const eligible=roomsCells.map((cells,index)=>({cells,index}))
+   .filter(o=>o.cells.length>cfg.maxRoomCells && roomsCells.length<cfg.targetRooms+5)
+   .sort((a,b)=>b.cells.length-a.cells.length);
+  if(!eligible.length && roomsCells.length>=cfg.targetRooms)break;
+  const option=(eligible.length?eligible:roomsCells.map((cells,index)=>({cells,index}))
+      .filter(x=>x.cells.length>=18).sort((a,b)=>b.cells.length-a.cells.length))
+    .map(entry=>({...entry,split:trySplit(entry.cells)}))
+    .find(entry=>entry.split);
+  if(!option)break;
+  roomsCells.splice(option.index,1,option.split.left,option.split.right);
+ }
+ if(roomsCells.length<5||roomsCells.length>22)throw Error('Building grammar produced invalid room count');
+ const chosen=shuffle(Object.keys(ROOM_TYPES),rng),rooms=[];
+ for(let i=0;i<roomsCells.length;i++){
+  const cells=roomsCells[i].map(c=>({...c,...cellWorld(c.gx,c.gz)}));
   const id=i+1,type=chosen[i%chosen.length];
-  const cells=[];
-  for(let z=r.minGZ;z<=r.maxGZ;z++)for(let x=r.minGX;x<=r.maxGX;x++){
-   grid[idx(x,z)]=id;
-   cells.push({gx:x,gz:z,...cellWorld(x,z)});
-  }
-  const x=cells.reduce((s,c)=>s+c.x,0)/cells.length,
-        z=cells.reduce((s,c)=>s+c.z,0)/cells.length;
+  for(const c of cells)grid[idx(c.gx,c.gz)]=id;
+  const x=cells.reduce((s,c)=>s+c.x,0)/cells.length,z=cells.reduce((s,c)=>s+c.z,0)/cells.length;
   rooms.push({id,type,kind:type,name:ROOM_TYPES[type].name,
-   side:rzSide(r.rz),x,z,cells,area:cells.length*TILE*TILE,
-   xMin:cellWorld(r.minGX,r.minGZ).x-TILE/2,
-   xMax:cellWorld(r.maxGX,r.maxGZ).x+TILE/2,
-   zMin:cellWorld(r.minGX,r.minGZ).z-TILE/2,
-   zMax:cellWorld(r.maxGX,r.maxGZ).z+TILE/2,
-   bay:r});
- });
- if(reachableCells(grid,HALL)!==grid.filter(v=>v===HALL).length)throw Error('Circulation network disconnected');
- return {grid,rooms,xc,zc,spurs,atrium:{x:cellWorld(xMid,zMid).x+TILE/2,z:cellWorld(xMid,zMid).z+TILE/2}};
+   side:z<-1?'north':z>1?'south':'middle',
+   x,z,cells,area:cells.length*TILE*TILE,
+   xMin:Math.min(...cells.map(c=>c.x-TILE/2)),
+   xMax:Math.max(...cells.map(c=>c.x+TILE/2)),
+   zMin:Math.min(...cells.map(c=>c.z-TILE/2)),
+   zMax:Math.max(...cells.map(c=>c.z+TILE/2))});
+ }
+ if(reachableCells(grid,HALL)!==grid.filter(v=>v===HALL).length)
+   throw Error('Hallway network disconnected for '+style);
+ return {grid,rooms,atrium,style,footprint:{minGX:x0,maxGX:x1,minGZ:z0,maxGZ:z1}};
 }
 const rzSide=(z)=>z===0?'north':z===2?'south':'middle';
 function chooseDoors(grid,rooms,rng){
@@ -215,9 +284,11 @@ export function isWalkable(layout,x,z,radius=.29){
    segmentDistance(x,z,o)<radius+WALL_THICKNESS/2 :
    pointBoxDistance(x,z,o)<radius);
 }
-export function generateTopology(seed='vitae-001'){
+export function generateTopology(seed='vitae-001',requestedType='auto'){
  const rng=seededRandom(String(seed)+'::architecture');
- const {grid,rooms,xc,zc,spurs,atrium}=topologicalGrid(rng);
+ const style=requestedType==='auto'?
+  BUILDING_TYPE_IDS[Math.floor(rng()*BUILDING_TYPE_IDS.length)]:requestedType;
+ const {grid,rooms,atrium,footprint}=topologicalGrid(rng,style);
  const doors=chooseDoors(grid,rooms,rng);
  const walls=wallsFromGrid(grid,doors);
  const chamfers=bevelCorners(grid,rooms,doors,walls,rng);
@@ -230,10 +301,11 @@ export function generateTopology(seed='vitae-001'){
  const center=hall.reduce((a,c)=>!a||Math.hypot(c.x,c.z)<Math.hypot(a.x,a.z)?c:a,null);
  const layout={seed:String(seed),grid,rooms,doors,walls,chamfers,floors,
   props:[],obstacles:walls.filter(w=>w.kind==='wall'||w.kind==='diagonal').map(w=>({...w})),
-  tile:TILE,xc,zc,spurs,atrium,
+  tile:TILE,buildingType:style,buildingName:BUILDING_TYPES[style].name,
+  footprint,atrium,
   spawn:{x:center.x,z:center.z},bounds:{
    minX:-GRID_W*TILE/2,maxX:GRID_W*TILE/2,
    minZ:-GRID_H*TILE/2,maxZ:GRID_H*TILE/2},
-  geometryVersion:3};
+  geometryVersion:4};
  return layout;
 }
