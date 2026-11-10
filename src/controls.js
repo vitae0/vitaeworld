@@ -29,7 +29,7 @@ export class Controller {
   };
   document.addEventListener('mousemove',e=>{
     if(document.pointerLockElement===c)look(e.movementX,e.movementY);
-    else if(this.dragging && e.buttons)look(e.movementX,e.movementY);
+    // Unlocked mouse dragging is handled by canvas pointermove only.
   });
   c.addEventListener('pointerdown',e=>{
     if(e.pointerType==='touch'){
