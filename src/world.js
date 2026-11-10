@@ -55,7 +55,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  const wallMesh=new THREE.InstancedMesh(geometry(1,1,1),wallMat,layout.walls.length);
  wallMesh.name='PerimeterAndPartitions';wallMesh.frustumCulled=false;
  layout.walls.forEach((w,i)=>{
-   tmp.position.set(w.x,w.y,w.z);tmp.rotation.set(0,0,0);tmp.scale.set(w.w,w.height,w.d);
+   tmp.position.set(w.x,w.y,w.z);tmp.rotation.set(0,w.angle||0,0);tmp.scale.set(w.w,w.height,w.d);
    tmp.updateMatrix();wallMesh.setMatrixAt(i,tmp.matrix);
    const accent=w.kind==='lintel'?tint(palette.trim,palette.wall,.4):color(palette.wall);
    wallMesh.setColorAt(i,accent);
@@ -67,7 +67,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  const trimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
  trimMesh.name='ArchitecturalBaseboards';trimMesh.frustumCulled=false;
  normalWalls.forEach((w,i)=>{
-   tmp.position.set(w.x,.20,w.z);tmp.scale.set(w.w+.045,.11,w.d+.045);tmp.updateMatrix();
+   tmp.position.set(w.x,.20,w.z);tmp.rotation.set(0,w.angle||0,0);tmp.scale.set(w.w+.045,.11,w.d+.045);tmp.updateMatrix();
    trimMesh.setMatrixAt(i,tmp.matrix);
  });
  trimMesh.instanceMatrix.needsUpdate=true;root.add(trimMesh);
