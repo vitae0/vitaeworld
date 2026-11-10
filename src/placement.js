@@ -104,6 +104,20 @@ function fits(room,p,others,door,layout,rug){
  const pad=.12;
  if(p.x-p.w/2<room.xMin+pad||p.x+p.w/2>room.xMax-pad||
     p.z-p.d/2<room.zMin+pad||p.z+p.d/2>room.zMax-pad)return false;
+ // A room's bounding box is not its actual footprint in branched/atrium plans.
+ // Check the whole candidate AABB against its ownership grid, including corners.
+ const minX=p.x-p.w/2-pad,maxX=p.x+p.w/2+pad;
+ const minZ=p.z-p.d/2-pad,maxZ=p.z+p.d/2+pad;
+ const check=(x,z)=>{
+  const cell=worldCell(x,z);
+  return cell.gx>=0&&cell.gz>=0&&cell.gx<GRID_W&&cell.gz<GRID_H&&
+    layout.grid[cell.gz*GRID_W+cell.gx]===room.id;
+ };
+ for(let x=minX;x<maxX;x+=TILE*.24)
+  for(let z=minZ;z<maxZ;z+=TILE*.24)
+   if(!check(x,z))return false;
+ for(const x of [minX,maxX])for(const z of [minZ,maxZ])
+  if(!check(x,z))return false;
  if(boxDistance(door.x,door.z,p)<.86||
     boxDistance(door.roomCell.x,door.roomCell.z,p)<.64)return false;
  // Corner cutouts are true physical constraints, not visual-only diagonals.
