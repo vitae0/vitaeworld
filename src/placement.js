@@ -1,5 +1,5 @@
 import {FURNITURE,FURNITURE_BY_ID,ROOM_TYPES,furnitureScore,LOCATION_DIMENSIONS} from './semantics.js';
-import {TILE,GRID_W,GRID_H,seededRandom} from './topology.js';
+import {TILE,GRID_W,GRID_H,seededRandom,worldCell} from './topology.js';
 import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
 
 // A 16D location vector and relational rules, independent of visual rendering.
@@ -120,7 +120,7 @@ function fits(room,p,others,door,layout,rug){
  if(rug)return !others.some(q=>q.role==='rug'&&overlaps(p,q,.18));
  return !others.some(q=>q.solid&&overlaps(p,q,.11));
 }
-function onSurface(room,a,others,score,mandatory){
+function onSurface(room,a,others,score,mandatory,layout){
  const parents=a.role==='computer'?others.filter(q=>q.role==='desk'):
   a.role==='kitchenTool'?others.filter(q=>q.role==='counter'||q.role==='storage'):
   a.model==='lampsquaretable'?others.filter(q=>q.role==='sidetable'):
@@ -131,8 +131,15 @@ function onSurface(room,a,others,score,mandatory){
   if(count>=2)continue;
   if(a.role!=='mirror'&&(parent.w<a.w*.85||parent.d<a.d*.85))continue;
   const off=count===0?-.17:.17;
-  return {model:a.model,x:parent.x+(Math.abs(Math.sin(parent.angle))>.5?0:off),
-   z:parent.z+(Math.abs(Math.sin(parent.angle))>.5?off:0),
+  const x0=parent.x+(Math.abs(Math.sin(parent.angle))>.5?0:off);
+  const z0=parent.z+(Math.abs(Math.sin(parent.angle))>.5?off:0);
+  const cell=worldCell(x0,z0);
+  // The parent may touch a parcel edge. Surface props must never end up in
+  // another room merely because their small offset crossed a cell boundary.
+  const valid=cell.gx>=0&&cell.gx<GRID_W&&cell.gz>=0&&cell.gz<GRID_H&&
+    layout.grid[cell.gz*GRID_W+cell.gx]===room.id;
+  const x=valid?x0:parent.x,z=valid?z0:parent.z;
+  return {model:a.model,x,z,
    w:a.w,d:a.d,modelW:a.w,modelD:a.d,
    h:a.h,angle:parent.angle,solid:false,roomId:room.id,role:a.role,
    semanticScore:+score.toFixed(3),locationScore:1,mandatory,
@@ -148,7 +155,7 @@ export function populateRooms(layout,seed=layout.seed){
   const objects=[],counts={},used=new Set();
   function add(a,mandatory=false){
    const semantic=furnitureScore(a,type,counts);
-   let spec=onSurface(room,a,objects,semantic,mandatory);
+   let spec=onSurface(room,a,objects,semantic,mandatory,layout);
    if(!spec){
     if(['computer','kitchenTool','mirror'].includes(a.role)||a.model==='lampsquaretable')
      return false;
