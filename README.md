@@ -1,50 +1,58 @@
-# VitaeWorld | Spatial Architecture Lab 03
+# VitaeWorld | Architecture Lab 04
 
-Browser-first 3D world experiment, completely independent from earlier Vitae Hotel prototypes.
+Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
-**Playable GitHub Pages build:** https://vitae0.github.io/vitaeworld/
+**Live prototype:** https://vitae0.github.io/vitaeworld/
 
-## What's new in Lab 03
+## Architecture selection
 
-The old oversized, straight-corridor layout is replaced with **16 smaller rooms** (usually about **20–41 m²**) around a genuinely connected multi-loop circulation network:
+A new **Building Architecture** dropdown controls the building family. **Auto** chooses a deterministic family from the world seed; any explicit choice regenerates that family with the same seed.
 
-- Two longitudinal and two transverse corridors with multiple intersections and walkable loops.
-- Two side connector corridors, a shared middle lobby, and an inner open-air atrium.
-- Compact rooms with **45° chamfered walls**, generated as real angled wall meshes and physics obstacles.
-- **40-dimensional functional vectors** for 61 CC0 furniture items and 11 room archetypes.
-- A separate **16-dimensional placement vector per item** describing wall, corner, centre, entrance, deep/private zones, daylight, partner-facing, social grouping, and safe clearances.
-- Denser, less arbitrary furniture arrangements. Mandatory items establish each space's purpose; relationship rules place desks/chairs, dining sets, sofas/coffee tables, and computers or table lamps on support furniture. The placement score chooses among valid physical positions rather than randomly scattering objects.
-- A compact multi-loop minimap, first/third person camera, two temporary stylized CC0 character prototypes, and desktop/mobile controls.
+| Style | Layout | Typical room count |
+| --- | --- | ---: |
+| **Compact Residence** (`compact`) | Small footprint and short cross circulation | 8 |
+| **Central Atrium** (`central`) | Large shared lobby and cross-connected wings | 16 |
+| **Urban Grid** (`grid`) | Intersecting corridor grid, repeatable parcels | 18 |
+| **Courtyard Loop** (`courtyard`) | Looping routes around an open-air courtyard | 17 |
+| **Connected Wings** (`branched`) | Cross-links and lateral wings with secondary loops | 12 |
 
-## Run
+Room counts reflect the current grammar and may change if its parameters are tuned. Rooms inherit functional definitions from 11 room archetypes; corridors, setbacks, entrances and 45° wall chamfers are generated independently from their furnishings.
+
+The floor plan uses a 25×19 occupancy grid of 1.3m cells. Room splitting validates corridor access and component connectivity; furniture placement validates the actual cell ownership of **the complete furniture footprint**, not simply the room bounding box.
+
+## Furniture orientation, not just position
+
+61 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
+
+A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
+
+## Try it
 
 Requires Node.js 20.19+ and npm:
 
-```bash
+```sh
 npm install
 npm run dev
 npm test
 npm run build
 ```
 
-**Desktop:** WASD / arrow keys move, mouse drag or Capture Mouse to look, Shift sprint, V toggles first/third person, R generates a new seed, Escape releases the pointer lock. **Touch:** left joystick, drag-to-look, CAM button.
-
-Re-enter the same world seed for a byte-for-byte reproducible world layout and furniture arrangement. Different seeds change zoning, use mix, courtyard/entry details, chamfer positions, material palettes, and the furnishing choices.
+**Desktop:** WASD / arrows move, mouse drag / Capture Mouse to look, Shift sprint, V first/third person, R new seed, Escape release cursor. **Touch:** joystick + drag-to-look + CAM.
 
 ## Modules
 
-- `src/semantics.js` — editable 40D functional and 16D positional vectors for the entire furniture catalogue.
-- `src/topology.js` — multi-loop hallways, compact room polygons approximated on a grid, actual 45° wall segments, collision geometry and door selection.
-- `src/placement.js` — candidate placement, functional compatibility, spatial scores, companion clusters, clearance checks and supports.
-- `src/layout.js` — stable public layout API composing architecture and placement.
-- `src/world.js` — instanced floors, 3D walls, ceilings, trims and lighting.
-- `src/assets.js` — licensed remote GLB cache, material handling and simple fallbacks.
-- `src/controls.js` — first/third-person controls and collision-aware motion.
-- `src/main.js` — rendering orchestration, minimap and UI.
-- `tests/layout.test.mjs` — 61-seed layout, loop, doorway, vector, 45° angle and furniture regressions.
+- `src/topology.js` — five independently selectable architectural grammars, corridor graphs, room division, doorway selection, 45° walls.
+- `src/semantics.js` — 40D room and furniture features and 16D spatial preferences.
+- `src/placement.js` — candidate positions, actual-room occupancy checks, companion targets, facing constraints and collision checks.
+- `src/orientation.js` — yaw and facing conventions plus asset-space compensation.
+- `src/layout.js` — deterministic public API `generateLayout(seed, type='auto')`.
+- `src/world.js` — Three.js instanced floors, walls, trim and lighting.
+- `src/assets.js` — revision-pinned CC0 asset loading, normalization and fallback.
+- `src/controls.js`, `src/main.js` — player and UI.
+- `tests/layout.test.mjs` — per-style doorway/loop/placement/facing regressions.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for formulas, constraints, extension points and known limitations. See [ASSETS.md](ASSETS.md) for model licensing and provenance.
+More implementation details are in [Architecture](docs/ARCHITECTURE.md) and external licenses in [Asset Registry](ASSETS.md).
 
-## Known limits
+## Unfinished areas
 
-This is still a proof of concept, not a finished furnished-home designer. Rooms are rectangular parcels with selected chamfered corners, not full freeform curved polygons. Structural doors are pass-through openings; furniture physics and camera collisions are coarse footprint tests, not a full navmesh. A guaranteed visual quality bar requires browser screenshots/playtesting. We currently fetch pinned CC0 GLBs from public endpoints; future production needs compressed local assets and meshes pooled by type. There are no stairs, multiple storeys, interactions, city streaming, or multiplayer yet.
+The room footprints remain cell-based, with a limited number of true 45° corners. GLB model orientation needs in-browser visual inspection for any asset-native exceptions. This is not a complete navigation mesh or collision physics engine; multi-storey buildings, interaction systems, assets packaged locally, exterior city blocks and multiplayer remain future work.
