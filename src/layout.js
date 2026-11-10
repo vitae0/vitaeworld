@@ -104,11 +104,10 @@ function initialGrid(rng) {
    if(towardsNorth)for(let z=2;z<=mids[x];z++)hallAt(x,z);
    else for(let z=mids[x]-1;z<=GRID_H-3;z++)hallAt(x,z);
  }
- const b1=[],b2=[],swing=rng()*Math.PI*2;
- for(let z=0;z<GRID_H;z++){
-   b1[z]=7+Math.round(Math.sin(z*.73+swing));
-   b2[z]=14+Math.round(Math.sin(z*.69+swing+1.2));
- }
+ // Keep the room partitions on either side of the two corridor spurs.
+ // Jagged interior footprint comes from the meandering hall and outer facades.
+ // Offsetting these cuts past a spur can isolate a room into two unconnected islands.
+ const b1=new Array(GRID_H).fill(6),b2=new Array(GRID_H).fill(14);
  const northMargin=Array.from({length:GRID_W},(_,x)=>
    clamp(Math.round(.85+.92*Math.sin(x*.52+phase*1.7)+.3*Math.sin(x*1.9)),0,2));
  const southMargin=Array.from({length:GRID_W},(_,x)=>
@@ -137,6 +136,7 @@ function initialGrid(rng) {
  if(eligible.length){
    const i=eligible[Math.floor(rng()*eligible.length)];
    grid[i]=OUTSIDE; // tiny skylight courtyard / architectural void.
+   if(!isRoomConnected(grid,holeRoom))grid[i]=holeRoom;
  }
  return {grid,mids};
 }
@@ -309,9 +309,14 @@ function placeFurniture(layout,rng) {
    const success=()=>placed.filter(p=>p.roomId===room.id);
    for(const model of definition.required){
      const item=FURNITURE_BY_ID[model];
-     if(add(room,item,furnitureScore(item,definition,counts),true)){
-       used.add(model);counts[item.role]=(counts[item.role]||0)+1;
-     }
+     const score=furnitureScore(item,definition,counts);
+     // Keep a room's essential functional objects; compact them if space is tight.
+     // The visual GLB and its reserved footprint shrink together.
+     const fitted=[1,.85,.7].some(scale=>{
+       const adjusted=scale===1?item:{...item,w:item.w*scale,d:item.d*scale};
+       return add(room,adjusted,score,true);
+     });
+     if(fitted){used.add(model);counts[item.role]=(counts[item.role]||0)+1;}
    }
    const candidates=FURNITURE.map(a=>({a,score:furnitureScore(a,definition,counts)}))
      .filter(({a,score})=>!used.has(a.model)&&score>1.12)
