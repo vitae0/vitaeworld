@@ -74,7 +74,7 @@ export const FURNITURE=Object.freeze([
  asset('bedsingle',1.15,2.15,0.8,'wall','bed',{sleep:3,recovery:2,privacy:2,soft:3,compact:2}),
  asset('sidetabledrawers',0.65,0.55,0.65,'wall','sidetable',{sleep:2,storage:2,compact:3,contemporary:2}, {companion:'bed'}),
  asset('cabinetbed',1.25,0.55,0.8,'wall','storage',{sleep:2,storage:3,compact:2}),
- asset('lampsquaretable',0.42,0.38,0.52,'wall','lighting',{sleep:2,illumination:3,warm:3,quiet:2,accent:1}, {solid:false,companion:'bed'}),
+ asset('lampsquaretable',0.42,0.38,0.52,'wall','lighting',{sleep:2,illumination:3,warm:3,quiet:2,accent:1}, {solid:false,companion:'sidetable'}),
  asset('lamproundtable',0.42,0.4,0.55,'wall','lighting',{illumination:3,warm:2,quiet:2,accent:2}, {solid:false}),
  asset('lamproundfloor',0.52,0.52,1.65,'corner','lighting',{illumination:3,accent:2,premium:1,tall:2}),
  asset('lampsquarefloor',0.48,0.48,1.55,'corner','lighting',{illumination:3,contemporary:2,tall:2,warm:1}),
