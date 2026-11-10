@@ -1,96 +1,130 @@
 import * as THREE from 'three';
-import {ROOM_THEMES} from './layout.js';
+import {ROOM_THEMES,TILE,WALL_HEIGHT} from './layout.js';
 import {addFurniture} from './assets.js';
 
-const WALL_H=3.25;
 const PALETTES=[
- {name:'Aurora',wall:0xd5e0e3,edge:0x1b3848,floor:0x516875,hall:0x294756,light:0x8ffff1},
- {name:'Nocturne',wall:0xd8d3d5,edge:0x312a4b,floor:0x766b7e,hall:0x3b3652,light:0xffc99f},
- {name:'Solstice',wall:0xd5d7c7,edge:0x2e4338,floor:0x718574,hall:0x395d50,light:0xb2f1cd}
+ {name:'Aurora',wall:0xd0e0e3,trim:0x294856,floor:0x546d77,hall:0x214a55,light:0x80ffe3},
+ {name:'Nocturne',wall:0xdcd4df,trim:0x493852,floor:0x78677d,hall:0x51405d,light:0xffcfaa},
+ {name:'Solstice',wall:0xd9ddcf,trim:0x345244,floor:0x748879,hall:0x2e574d,light:0xb9f9c8}
 ];
-function hex(s){return new THREE.Color(s);}
 export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
- const colors=PALETTES[paletteIndex%PALETTES.length];
- const root=new THREE.Group();
+ const palette=PALETTES[paletteIndex%PALETTES.length];
+ const root=new THREE.Group();root.name='ProceduralBuilding';
  scene.add(root);
+ const ceiling=new THREE.Group();ceiling.name='CeilingOcclusionLayer';root.add(ceiling);
  const owned=new Set();
- const ceiling=new THREE.Group();
- root.add(ceiling);
- function material(color,emissive=0x000000,intensity=0){
-   const m=new THREE.MeshStandardMaterial({color,roughness:0.82,metalness:0.04,
-     emissive,emissiveIntensity:intensity});
-   owned.add(m);return m;
+ const tmp=new THREE.Object3D();
+ const color=(n)=>new THREE.Color(n);
+ const tint=(a,b,t)=>color(a).lerp(color(b),t);
+ function material(hex,options={}){
+  const m=new THREE.MeshStandardMaterial({color:hex,roughness:.78,metalness:.08,...options});
+  owned.add(m);return m;
  }
- const wallMat=material(colors.wall),trimMat=material(colors.edge),
-   hallMat=material(colors.hall),ceilingMat=material(0xdee3e5),
-   lightMat=material(0xffffff,colors.light,1.8);
- function box(parent,w,h,d,x,y,z,mat){
-   const g=new THREE.BoxGeometry(w,h,d);
-   owned.add(g);
-   const mesh=new THREE.Mesh(g,mat);
-   mesh.position.set(x,y,z);
-   mesh.receiveShadow=true;
-   parent.add(mesh);
-   return mesh;
+ function geometry(w,h,d){const g=new THREE.BoxGeometry(w,h,d);owned.add(g);return g;}
+ const neutral=material(0xffffff),ceilingMat=material(0xdde5e8);
+ const wallMat=material(0xffffff),trimMat=material(palette.trim);
+ const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:2.2});
+ // Floors are one GPU draw call. Per-instance colours encode room character.
+ const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),neutral,layout.floors.length);
+ floors.name='SemanticFloorTiles';
+ floors.frustumCulled=false;
+ layout.floors.forEach((tile,i)=>{
+   tmp.position.set(tile.x,0,tile.z);tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);tmp.updateMatrix();
+   floors.setMatrixAt(i,tmp.matrix);
+   const room=layout.rooms.find(r=>r.id===tile.roomId);
+   const base=tile.roomId===0?color(palette.hall):
+     tint(ROOM_THEMES[room.type],palette.floor,.52);
+   // Subtle architectural floor variation, tied to geometry rather than RNG.
+   const shade=((tile.gx*7+tile.gz*11)%9)*.006;
+   base.lerp(color(0xffffff),shade);
+   floors.setColorAt(i,base);
+ });
+ floors.instanceMatrix.needsUpdate=true;
+ if(floors.instanceColor)floors.instanceColor.needsUpdate=true;
+ root.add(floors);
+ const roof=new THREE.InstancedMesh(geometry(TILE+.02,.13,TILE+.02),ceilingMat,layout.floors.length);
+ roof.name='CeilingTiles';roof.frustumCulled=false;
+ layout.floors.forEach((tile,i)=>{
+   tmp.position.set(tile.x,WALL_HEIGHT+.24,tile.z);
+   tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);tmp.updateMatrix();
+   roof.setMatrixAt(i,tmp.matrix);
+ });
+ roof.instanceMatrix.needsUpdate=true;
+ ceiling.add(roof);
+ // Irregular outlines, T-junctions, courtyard and door recesses share 1 draw call.
+ const wallMesh=new THREE.InstancedMesh(geometry(1,1,1),wallMat,layout.walls.length);
+ wallMesh.name='PerimeterAndPartitions';wallMesh.frustumCulled=false;
+ layout.walls.forEach((w,i)=>{
+   tmp.position.set(w.x,w.y,w.z);tmp.rotation.set(0,0,0);tmp.scale.set(w.w,w.height,w.d);
+   tmp.updateMatrix();wallMesh.setMatrixAt(i,tmp.matrix);
+   const accent=w.kind==='lintel'?tint(palette.trim,palette.wall,.4):color(palette.wall);
+   wallMesh.setColorAt(i,accent);
+ });
+ wallMesh.instanceMatrix.needsUpdate=true;
+ if(wallMesh.instanceColor)wallMesh.instanceColor.needsUpdate=true;
+ root.add(wallMesh);
+ const normalWalls=layout.walls.filter(w=>w.kind==='wall');
+ const trimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
+ trimMesh.name='ArchitecturalBaseboards';trimMesh.frustumCulled=false;
+ normalWalls.forEach((w,i)=>{
+   tmp.position.set(w.x,.20,w.z);tmp.scale.set(w.w+.045,.11,w.d+.045);tmp.updateMatrix();
+   trimMesh.setMatrixAt(i,tmp.matrix);
+ });
+ trimMesh.instanceMatrix.needsUpdate=true;root.add(trimMesh);
+ // Doorway accent lighting follows the actual irregular wall topology.
+ const highlights=[];
+ for(const door of layout.doors){
+   const room=layout.rooms.find(r=>r.id===door.roomId);
+   const wide=door.axis==='x';
+   highlights.push({x:door.x,z:door.z,y:WALL_HEIGHT-.29,
+     w:wide?1.6:.055,d:wide?.055:1.6,c:ROOM_THEMES[room.type]});
  }
- // Corridor. Adjacent floor slabs have no gaps or phantom colliders.
- box(root,27,0.20,4,0,0,0,hallMat);
- box(ceiling,27,0.13,4,0,WALL_H+0.07,0,ceilingMat);
+ for(const tile of layout.floors){
+   if(tile.roomId!==0)continue;
+   if((tile.gx+2*tile.gz)%13===0)
+     highlights.push({x:tile.x,z:tile.z,y:WALL_HEIGHT+.15,w:.7,d:.30,c:palette.light});
+ }
+ const highlightsMesh=new THREE.InstancedMesh(geometry(1,1,1),emissive,highlights.length);
+ highlightsMesh.name='CorridorAndPortalLightStrips';highlightsMesh.frustumCulled=false;
+ highlights.forEach((o,i)=>{
+   tmp.position.set(o.x,o.y,o.z);tmp.scale.set(o.w,.035,o.d);tmp.updateMatrix();
+   highlightsMesh.setMatrixAt(i,tmp.matrix);highlightsMesh.setColorAt(i,color(o.c));
+ });
+ highlightsMesh.instanceMatrix.needsUpdate=true;
+ if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
+ root.add(highlightsMesh);
+ // Wall art turns long irregular wall runs into recognizable places.
+ const art=new THREE.Group();root.add(art);
+ const artFrame=material(palette.trim);
+ const artMatByType=new Map();
  for(const room of layout.rooms){
-   const floorColor=hex(ROOM_THEMES[room.kind]).lerp(new THREE.Color(colors.floor),0.58);
-   const floorMat=material(floorColor);
-   box(root,8.99,0.20,8.99,room.x,0,room.z,floorMat);
-   box(ceiling,8.99,0.13,8.99,room.x,WALL_H+0.07,room.z,ceilingMat);
-   // Colour accent on the back wall, with neat trim so rooms look intentionally furnished.
-   const rearZ=room.side==='north'?-10.865:10.865;
-   const accent=material(hex(ROOM_THEMES[room.kind]).lerp(new THREE.Color(colors.wall),0.25));
-   box(root,7.7,1.35,0.025,room.x,1.65,rearZ,accent);
-   box(root,7.7,0.055,0.06,room.x,0.62,rearZ-0.025,trimMat);
-   // Entrance side glow: identifying each room from the corridor.
-   const front=room.side==='north'?-2.06:2.06;
-   box(root,2.5,0.08,0.1,room.x,2.94,front,lightMat);
-   // Wall art as an accent, without extra textures.
-   const x=room.x+2.85;
-   box(root,1.35,0.85,0.05,x,1.97,rearZ*0.993,trimMat);
-   box(root,1.18,0.67,0.067,x,1.97,rearZ*0.989,accent);
+   const candidate=room.cells.find(c=>{
+     const {gx,gz}=c;
+     const n=room.side==='north'?gz-1:gz+1;
+     return n>=0&&n<15&&layout.grid[n*21+gx]===-1;
+   });
+   if(!candidate)continue;
+   const z=candidate.z+(room.side==='north'?-TILE/2+.095:TILE/2-.095);
+   const outer=geometry(1.4,.8,.07);
+   const frame=new THREE.Mesh(outer,artFrame);frame.position.set(candidate.x,1.94,z);art.add(frame);
+   if(!artMatByType.has(room.type))artMatByType.set(room.type,material(ROOM_THEMES[room.type]));
+   const inset=new THREE.Mesh(geometry(1.24,.65,.084),artMatByType.get(room.type));
+   inset.position.set(candidate.x,1.94,z+(room.side==='north'?.012:-.012));art.add(inset);
  }
- for(const w of layout.walls){
-   box(root,w.w,WALL_H,w.d,w.x,WALL_H/2,w.z,wallMat);
-   // inset baseboard distinguishes partitions from the floor
-   if(w.w>w.d){
-     box(root,w.w,0.1,w.d+0.12,w.x,0.16,w.z,trimMat);
-   }else{
-     box(root,w.w+0.12,0.1,w.d,w.x,0.16,w.z,trimMat);
-   }
- }
- // Every door is a real gap in the collision wall, not a fake transparent panel.
- for(const d of layout.doors) {
-   for(const side of [-1,1])box(root,0.10,WALL_H,0.23,d.x+side*1.15,WALL_H/2,d.z,trimMat);
-   box(root,2.38,0.14,0.25,d.x,WALL_H-0.06,d.z,trimMat);
- }
- // Architecture lighting is deliberately sparse for browser GPU budgets.
- const globalLight=new THREE.HemisphereLight(0xddeeff,0x596f75,2.0);
- root.add(globalLight);
- const sun=new THREE.DirectionalLight(0xfff5eb,1.7);
- sun.position.set(-8,12,4);root.add(sun);
- for(const x of [-9,0,9])for(const z of [-6.5,0,6.5]){
-   box(ceiling,0.9,0.045,0.35,x,WALL_H-0.02,z,lightMat);
- }
- const furniture=new THREE.Group();
- root.add(furniture);
- for(const p of layout.props)addFurniture(furniture,p,owned,onAsset);
- // Understated corridor strips instead of dozens of expensive real point lights.
- for(const x of [-10,-5,0,5,10])
-   box(root,1.8,0.025,0.05,x,0.115,-1.84,lightMat);
+ const hemi=new THREE.HemisphereLight(0xe9f7ff,0x536e70,2.15);root.add(hemi);
+ const sun=new THREE.DirectionalLight(0xfff4e6,1.55);
+ sun.position.set(-11,17,3);root.add(sun);
+ const items=new THREE.Group();items.name='SemanticFurniture';root.add(items);
+ for(const p of layout.props)addFurniture(items,p,owned,onAsset);
  let disposed=false;
  return {
-   root,ceiling,colors,paletteName:colors.name,
-   setFirstPerson(isFP){ceiling.visible=isFP;},
-   dispose(){
-     if(disposed)return;disposed=true;
-     scene.remove(root);
-     for(const x of owned)x.dispose();
-     // GLB geometry stays cached in assets.js; never dispose shared vendor geometry.
-   }
+  root,ceiling,colors:palette,paletteName:palette.name,
+  setFirstPerson(isFirst){ceiling.visible=isFirst;},
+  dispose(){
+    if(disposed)return;disposed=true;
+    scene.remove(root);
+    for(const resource of owned)resource.dispose();
+    // Remote GLB buffers are intentionally cache-owned, not world-owned.
+  }
  };
 }
