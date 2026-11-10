@@ -1,42 +1,72 @@
-# Architecture: interiors first, city later
+# VitaeWorld Lab 02: procedural architecture and semantic interior design
 
-## Current dependency graph
+## Design goal
 
-- `src/layout.js` — pure deterministic layout function, room recipes and 2D collision footprints. No WebGL.
-- `src/assets.js` — pinned CC0 GLB manifest, cached GLTF loading, scale normalization, stylized avatar, fallback props.
-- `src/world.js` — Three.js scene assembly from layout data (floors, architecture, door frames, furnishings and light), reusable material palettes, GPU disposal.
-- `src/controls.js` — collision-aware first/third-person movement; camera orbit remains independent from an idle avatar; touch joystick and drag camera.
-- `src/main.js` — app bootstrap, HUD, regeneration, minimap and render loop.
-- `tests/layout.test.mjs` — deterministic layout, six doorway clearances, furniture footprint bounds.
+Procedural generation should produce **coherent and surprising architecture**, not six identical boxes with shuffled furniture. The seed selects among constraints, while the constraints encode spatial logic and room purposes.
 
-## World generation contract
+## 40-dimensional semantic feature space
 
-`generateLayout(seed)` returns serializable `{rooms,doors,walls,props,obstacles,spawn,bounds}`.
+`src/semantics.js` defines the **40 stable dimensions**:
 
-`rooms`: six room cells (3x2) with a central corridor. Types are shuffled by a deterministic PRNG. `props` are room-local predefined compositions applied to room cells. Every room opens onto a four-metre hallway with a physically unobstructed 2.3m doorway. `obstacles` are world-space 2D AABBs reused by the player movement system. This is **constraint-based placement inside fixed rooms**, not yet a general floor-plan synthesizer.
+sleep, lounge, social, dine, cook, hygiene, work, study, creative, play,
+media, storage, display, fitness, recovery, nature, technology, illumination,
+privacy, openness, warm, cool, premium, industrial, contemporary, playful,
+quiet, energy, soft, hard, water, dry, ground, vertical, corner, center,
+tall, compact, group, accent.
 
-Re-generation keeps a stable, testable layout for the same seed. Palette changes do not change geometry. Replacing `recipe()` data or introducing new tiles does not require editing controller logic.
+Every dimension uses an ordinal integer in `[0,3]`: 0 means unrelated; 3 indicates central purpose. We explicitly rate **61 furniture models** and **11 room profiles**. `vector(traits)` expands sparse human-readable annotations to a 40-entry array. Unknown dimensions and out-of-range scores throw immediately.
 
-## Phase plan
+### Selection scoring
 
-1. **Interior lab (implemented prototype):** six connected spaces, prop catalogue, basic flat floor collisions, avatar view switching, keyboard/touch movement, seeded deterministic generation.
-2. **Modular building kit:** introduce variable room shape/size, doors, windows, floor/ceiling mesh tiles and real physical bathroom subdivisions. Solve adjacency graph & circulation paths before adding props. Add object placement clearance solver and robust capsule physics (Rapier preferred).
-3. **Multiple storeys:** stairs, elevators, portals, floor occlusion, navigation meshes and streaming.
-4. **Street blocks:** parcel lots, facade kit, entrances, level of detail and interior streaming.
-5. **City:** district grammar, road graph, world streaming, multiplayer hooks, baked occlusion and asset pooling.
+Let `u` be the candidate item's 40-D vector and `v` a room's target vector. We use
 
-## Web performance policy
+```
+compatibility(u,v) = (u · v)/(||u||₂ ||v||₂)
+furnitureScore = 3.7 × compatibility - roleSaturation - categoryPenalty
+```
 
-- No per-prop lights or shadows. Shared GLB promises prevent duplicate network requests.
-- Third-person view hides ceilings and checks camera-wall collisions to reduce clipping.
-- GPU pixel ratio is capped, and frame deltas are clamped.
-- Future: vendor packed GLBs, meshopt/Draco, instancing common props, render-on-demand for static scenes, physics spatial index, LOD and mobile quality presets.
-- `buildWorld().dispose()` disposes owned procedural geometry/materials but preserves cached vendor GLB buffers for re-use.
+`roleSaturation` avoids repeated large sofas, duplicate kitchen appliances, etc. We place mandatory essentials first, then rank remaining candidates by semantic score. Randomness is a *small deterministic tie-breaker*, never a replacement for semantic fit.
 
-## Honest prototype limitations
+### Physical and compositional constraints
 
-- The six rooms currently occupy a **fixed grid** and use hand-designed furniture patterns selected by seed; not arbitrary generated architecture.
-- Only shallow footstep/room obstacles, no staircase, jumping, doors, multiplayer or server state.
-- CC0 GLB models are fetched from remote GitHub; a network failure shows geometric furniture placeholders.
-- Avatar animation falls back to subtle rig movement; complete walk/run animation and two gender-specific optimized bases still need integration.
-- Runtime and visual smoke testing require browser and network access. This commit includes unit tests for layout invariants, not a claim that all visual issues have been eliminated.
+Each furniture record includes a real footprint `(w,d,h)`, preferred anchor (`wall`, `corner`, or `center`), conceptual role, optional support/companionship and whether it blocks movement. Placements are constrained by:
+
+1. Room-cell occupancy and a 19cm safety margin around the candidate footprint.
+2. Clear passage through each 1.58m doorway plus an unobstructed room-entry throat.
+3. Furniture AABB separation and an additional 17-19cm buffer (except rugs).
+4. Wall or centre placement preferences.
+5. Companion proximity: coffee tables prefer sofas; dining chairs prefer dining tables. Small computers and table lamps are directly attached to support furniture and placed at its surface height.
+
+Furniture is never assigned a globally random x/z coordinate. Mandatory functional objects can scale uniformly to 85% or 70% to fit awkward footprints.
+
+## Spatial grammar
+
+`src/layout.js` constructs a 21×15 tile grid, with each tile spanning two metres. It forms a connected corridor that bends, widens into a hub, and branches into two cross-wings. North and south plots are divided into six room zones. Edge setbacks, a curved corridor footprint, alcoves, and occasional enclosed outdoor voids yield non-rectangular rooms. Eleven functional room archetypes are shuffled deterministically across those six zones.
+
+If a proposed room becomes disconnected or too small, it is rejected before any furniture placement. Each room receives exactly one doorway selected from valid room/corridor boundary edges. Walls are emitted from actual tile adjacency, not independent guessed geometry; a doorway is an *actual opening in the collision wall*.
+
+`generateLayout(seed)` returns a fully serializable `{grid,floors,rooms,doors,walls,props,obstacles,spawn,bounds}`. It does not depend on Three.js. `isWalkable` checks both occupancy and player-radius clearance against wall and furniture footprints.
+
+## Renderer and modular boundaries
+
+- `src/semantics.js`: declarative room templates, 40-dimensional vectors and furniture registry.
+- `src/layout.js`: pure repeatable floorplan, entrances, furniture placement, basic collisions.
+- `src/world.js`: instanced tiles/walls/trim, semantic material colours, doorway light accents, cached GLB furniture.
+- `src/assets.js`: version-pinned CC0 models, async loads, scale normalization and fallbacks.
+- `src/controls.js`: player motion and camera independence, touch input.
+- `src/main.js`: HUD, minimap, scene lifecycle and FPS.
+- `tests/layout.test.mjs`: scalar/vector tests, 46 seed regressions, corridor graph connectivity, room essentials and collision checks.
+
+## Optimization policy
+
+InstancedMesh for all common floor/wall/ceiling/trim geometry, reused material buffers, cached model requests, capped device pixel ratio, no per-object realtime lights. Remote GLBs remain the main limitation: long-term convert to meshopt/KTX2, vendor under `public/assets/vendor`, reuse geometry via instancing/merging, add occlusion and LOD.
+
+## Roadmap
+
+**Lab 03:** true curved/chamfered/diagonal walls, variable storeys, stairs, walkable navmeshes, furniture interaction, deterministic semantic grouping (bedside scene, dining clusters, workspace modules), live layout inspector with individual 40-D weights.
+
+**Lab 04:** modular building exteriors, façades, windows/doors, parcel lots, accessibility and performance budgets.
+
+**Lab 05:** a procedural streaming city built from connected buildings and a road graph, then optional multiplayer layers.
+
+No current claim of unrestricted floorplan synthesis or navmesh-certified complete navigation.
