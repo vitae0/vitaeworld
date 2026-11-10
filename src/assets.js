@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
+import {modelYawCorrection} from './orientation.js';
 
 // Asset files stay external in this early lab. Every URL is pinned to an audited revision.
 // All the assets below have explicit CC0 provenance in ASSETS.md.
@@ -86,9 +87,14 @@ export function addFurniture(group,spec,owned,onProgress=()=>{}) {
  loadGLB(FURNITURE_BASE+spec.model+'.glb').then((gltf)=>{
    if(!holder.parent)return;
    const target=normalized(gltf.scene,spec.h,{w:spec.modelW??spec.w,d:spec.modelD??spec.d});
-   // Keep the bounding-box floor offset applied by normalized().
+   // Structural layout yaw is always world -Z forward. Each imported GLB
+   // can have a different native front. Compensate *inside* the holder so
+   // collision footprints and floor-plan rotations stay synchronized.
+   const visualFrame=new THREE.Group();
+   visualFrame.rotation.y=modelYawCorrection(spec.model,spec.role);
+   visualFrame.add(target);
    holder.remove(standIn);
-   holder.add(target);
+   holder.add(visualFrame);
    onProgress(true);
  }).catch((error)=>{
    console.warn('Asset fallback:',spec.model,error);
