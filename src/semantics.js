@@ -63,11 +63,87 @@ export const ROOM_TYPES=Object.freeze({
 export const ROOM_NAMES=Object.freeze(Object.fromEntries(Object.entries(ROOM_TYPES).map(([id,r])=>[id,r.name])));
 export const ROOM_THEMES=Object.freeze(Object.fromEntries(Object.entries(ROOM_TYPES).map(([id,r])=>[id,r.color])));
 
+// Spatial intelligence is orthogonal to the 40-dimensional room-purpose vector.
+// A second 16D vector encodes where and how an object prefers to be placed.
+export const LOCATION_DIMENSIONS=Object.freeze([
+ 'perimeter','corner','central','entry','deep','daylight','privacy','left',
+ 'right','focal','cluster','clearance','quiet','public','view','surface'
+]);
+const locationIndex=Object.fromEntries(LOCATION_DIMENSIONS.map((d,i)=>[d,i]));
+export function locationVector(features={}){
+ const v=new Array(LOCATION_DIMENSIONS.length).fill(0);
+ for(const [key,value] of Object.entries(features)){
+   if(locationIndex[key]===undefined)throw Error('Unknown location trait: '+key);
+   if(!Number.isFinite(value)||value<0||value>3)throw Error('Location score must be 0-3: '+key);
+   v[locationIndex[key]]=value;
+ }
+ return Object.freeze(v);
+}
+// Individually assigned vectors inherit intentional role defaults, then model overrides.
+// This keeps the catalogue easy to edit without repeating 16 numbers 61 times.
+const ROLE_LOCATION={
+ bed:{perimeter:3,deep:3,privacy:3,quiet:3,clearance:2},
+ sidetable:{perimeter:3,deep:2,cluster:3,surface:1,quiet:2},
+ lighting:{perimeter:2,corner:2,deep:1,cluster:2,quiet:1},
+ sofa:{perimeter:3,focal:3,cluster:2,view:3,public:2},
+ chair:{perimeter:2,corner:2,cluster:2,quiet:1,view:2},
+ coffee:{central:3,cluster:3,focal:2,public:2},
+ rug:{central:3,cluster:3,public:2,clearance:1},
+ screen:{perimeter:3,focal:3,view:3,cluster:2},
+ mediaStorage:{perimeter:3,cluster:2,focal:3,view:2},
+ media:{perimeter:3,corner:2,focal:2,cluster:3},
+ storage:{perimeter:3,corner:2,clearance:3,deep:2},
+ display:{perimeter:2,central:2,daylight:2,view:3},
+ decoration:{perimeter:2,cluster:3,surface:3},
+ plant:{corner:3,perimeter:3,daylight:3,clearance:2},
+ desk:{perimeter:3,daylight:3,quiet:2,deep:2},
+ deskChair:{cluster:3,focal:3,clearance:2,view:3},
+ computer:{surface:3,cluster:3,focal:2,view:2},
+ coldStorage:{perimeter:3,corner:3,clearance:2},
+ cooking:{perimeter:3,cluster:3,clearance:2},
+ sink:{perimeter:3,cluster:2,clearance:3},
+ kitchenTool:{surface:3,cluster:3},
+ counter:{perimeter:3,cluster:3,public:2},
+ diningTable:{central:3,cluster:3,public:3,clearance:2},
+ diningChair:{central:2,cluster:3,focal:3,view:3,public:2},
+ bath:{perimeter:3,corner:2,deep:3,privacy:3,quiet:3},
+ mirror:{perimeter:3,surface:3,cluster:3},
+ toilet:{perimeter:3,corner:3,deep:3,privacy:3},
+ shower:{corner:3,perimeter:3,deep:3,privacy:3},
+ bench:{perimeter:2,entry:2,public:2},
+ ottoman:{central:3,cluster:3,focal:2}
+};
+const MODEL_LOCATION={
+ beddouble:{deep:3,privacy:3,central:0},
+ bedsingle:{corner:2,deep:3},
+ deskcorner:{corner:3,daylight:2},
+ loungechairrelax:{deep:3,privacy:3,daylight:2},
+ loungedesignchair:{focal:2,view:3},
+ pottedplant:{daylight:3,corner:3},
+ kitchenfridge:{corner:3,entry:2},
+ toilet:{privacy:3,deep:3},
+ bathtub:{privacy:3,deep:3},
+ televisionsmodern:{focal:3},
+ lamproundfloor:{corner:3,perimeter:3},
+ lampsquarefloor:{corner:3,perimeter:3},
+ bookcaseopen:{perimeter:3,corner:2},
+ bookcaseclosed:{perimeter:3,corner:2},
+ ruground:{central:3,quiet:2},
+ speaker:{perimeter:3,corner:2,cluster:3},
+ bathroommirror:{surface:3,focal:2}
+};
+export function spatialProfileFor(role,model,anchor){
+ const base={...ROLE_LOCATION[role],...MODEL_LOCATION[model]};
+ if(anchor==='wall')base.perimeter=Math.max(2,base.perimeter||0);
+ if(anchor==='corner')base.corner=Math.max(2,base.corner||0);
+ if(anchor==='center')base.central=Math.max(2,base.central||0);
+ return locationVector(base);
+}
 // Each item carries physical footprint (metres), scene anchoring mode, conceptual role,
 // 40-D hand-rated semantic profile and optional affinity to another furniture family.
 function asset(model,w,d,h,anchor,role,traits,{solid=true,companion=null}={}) {
  return Object.freeze({model,w,d,h,anchor,role,traits:Object.freeze(traits),
-   vector:vector(traits),solid,companion});
+   vector:vector(traits),locationVector:spatialProfileFor(role,model,anchor),solid,companion});
 }
 export const FURNITURE=Object.freeze([
  asset('beddouble',2.5,2.15,0.8,'wall','bed',{sleep:3,recovery:2,privacy:2,soft:3,warm:2,ground:2}),
