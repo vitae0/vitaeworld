@@ -225,8 +225,17 @@ export function populateRooms(layout,seed=layout.seed){
      const target=focus;
      const directional=DIRECTIONAL_ROLES.has(a.role);
      const face=directional?facingScore(p.angle,p,target):.5;
+     const width=room.xMax-room.xMin,depth=room.zMax-room.zMin;
+     // In a long, narrow lounge the sofa and TV belong on the short end
+     // walls, facing down the length. A cross-room arrangement can otherwise
+     // form an impenetrable furniture barricade even with perfect AABBs.
+     const longLounge=(room.type==='lounge'||room.type==='games')&&
+       (a.role==='sofa'||a.role==='screen')&&p.kind==='wall';
+     const endWall=width<depth*.78?Math.abs(Math.sin(p.angle))<.5:
+       depth<width*.78?Math.abs(Math.sin(p.angle))>.5:false;
+     const architectural=longLounge?(endWall?5.2:-1.0):0;
      const score=3.1*positional+1.45*companionFit+
-       (directional?.95*face:0)+
+       (directional?.95*face:0)+architectural+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
      candidates.push({p,score,locationScore:positional});
     }
