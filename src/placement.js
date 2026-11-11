@@ -1,6 +1,27 @@
 import {FURNITURE,FURNITURE_BY_ID,ROOM_TYPES,furnitureScore,LOCATION_DIMENSIONS} from './semantics.js';
 import {TILE,GRID_W,GRID_H,seededRandom,worldCell} from './topology.js';
 import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
+import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from './interior-quality.js';
+
+
+// Room identity constrains optional furnishing. Shared traits such as "modern"
+// must not turn a bathroom into an electronics showroom.
+const ROOM_ROLE_ALLOW=Object.freeze({
+ suite:new Set('bed sidetable lighting storage chair plant rug decoration bench'.split(' ')),
+ lounge:new Set('sofa coffee chair screen mediaStorage media lighting plant rug decoration ottoman storage'.split(' ')),
+ studio:new Set('desk deskChair computer storage display lighting plant decoration chair rug'.split(' ')),
+ office:new Set('desk deskChair computer storage lighting plant decoration bench rug'.split(' ')),
+ kitchen:new Set('coldStorage cooking sink kitchenTool counter diningTable diningChair storage lighting plant'.split(' ')),
+ bath:new Set('bath toilet sink mirror shower storage lighting plant'.split(' ')),
+ library:new Set('storage display chair lighting plant rug decoration desk bench'.split(' ')),
+ gallery:new Set('display decoration lighting plant chair bench rug storage'.split(' ')),
+ games:new Set('sofa screen media chair coffee ottoman rug lighting plant storage'.split(' ')),
+ wellness:new Set('rug chair plant lighting bench ottoman decoration storage'.split(' ')),
+ dining:new Set('diningTable diningChair lighting storage plant decoration bench rug'.split(' '))
+});
+const SURFACE_ONLY=new Set(['lampsquaretable','lamproundtable','computerscreen',
+ 'laptop','computerkeyboard','kitchencoffeemachine','bathroommirror',
+ 'books','radio','speakersmall']);
 
 // A 16D location vector and relational rules, independent of visual rendering.
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -131,33 +152,51 @@ function fits(room,p,others,door,layout,rug){
     if(u>=0&&v>=0&&u+v<cut.cut+.13)return false;
    }
  }
- if(rug)return !others.some(q=>q.role==='rug'&&overlaps(p,q,.18));
- return !others.some(q=>q.solid&&overlaps(p,q,.11));
+ if(rug)return !others.some(q=>q.role==='rug'&&footprintOverlap(p,q,.18));
+ // A decorative model is still a physical mesh. Non-solid objects cannot
+ // float inside a sofa simply because they are not movement obstacles.
+ return !others.some(q=>q.role!=='rug'&&!q.supportedBy&&footprintOverlap(p,q,.10));
 }
 function onSurface(room,a,others,score,mandatory,layout){
- const parents=a.role==='computer'?others.filter(q=>q.role==='desk'):
-  a.role==='kitchenTool'?others.filter(q=>q.role==='counter'||q.role==='storage'):
-  a.model==='lampsquaretable'?others.filter(q=>q.role==='sidetable'):
-  a.role==='mirror'?others.filter(q=>q.role==='sink'):null;
- if(!parents)return null;
+ let parents=[];
+ if(a.role==='computer')parents=others.filter(p=>p.role==='desk');
+ else if(a.role==='kitchenTool')parents=others.filter(p=>
+   p.role==='counter'||(p.role==='storage'&&p.model.startsWith('kitchen')));
+ else if(a.role==='mirror')parents=others.filter(p=>p.role==='sink');
+ else if(['lampsquaretable','lamproundtable'].includes(a.model))
+   parents=others.filter(p=>p.role==='sidetable'||p.role==='desk'||p.role==='display');
+ else if(['books','radio','speakersmall'].includes(a.model))
+   parents=others.filter(p=>['desk','sidetable','storage','display','mediaStorage'].includes(p.role));
+ if(!parents.length)return null;
  for(const parent of parents){
   const count=others.filter(q=>q.supportedBy===parent.id).length;
   if(count>=2)continue;
-  if(a.role!=='mirror'&&(parent.w<a.w*.85||parent.d<a.d*.85))continue;
-  const off=count===0?-.17:.17;
-  const x0=parent.x+(Math.abs(Math.sin(parent.angle))>.5?0:off);
-  const z0=parent.z+(Math.abs(Math.sin(parent.angle))>.5?off:0);
-  const cell=worldCell(x0,z0);
-  // The parent may touch a parcel edge. Surface props must never end up in
-  // another room merely because their small offset crossed a cell boundary.
-  const valid=cell.gx>=0&&cell.gx<GRID_W&&cell.gz>=0&&cell.gz<GRID_H&&
-    layout.grid[cell.gz*GRID_W+cell.gx]===room.id;
-  const x=valid?x0:parent.x,z=valid?z0:parent.z;
-  return {model:a.model,x,z,
-   w:a.w,d:a.d,modelW:a.w,modelD:a.d,
-   h:a.h,angle:parent.angle,solid:false,roomId:room.id,role:a.role,
-   semanticScore:+score.toFixed(3),locationScore:1,mandatory,
-   y:a.role==='mirror'?1.3:parent.y+parent.h*.95,supportedBy:parent.id};
+  const worldSize=dims(a,parent.angle);
+  // Model coordinates and collision bounds must rotate together.
+  if(parent.w<worldSize.w+.08||parent.d<worldSize.d+.08)continue;
+  for(const offset of (a.role==='mirror'?[0]:[count===0?-.25:.25,0])){
+   const sideX=Math.cos(parent.angle),sideZ=-Math.sin(parent.angle);
+   const backX=Math.sin(parent.angle),backZ=Math.cos(parent.angle);
+   const back=a.role==='mirror'?(parent.modelD-a.d)/2:0;
+   const x=parent.x+sideX*offset+backX*back;
+   const z=parent.z+sideZ*offset+backZ*back;
+   const spec={model:a.model,x,z,...worldSize,modelW:a.w,modelD:a.d,
+    h:a.h,angle:parent.angle,solid:false,roomId:room.id,role:a.role,
+    semanticScore:+score.toFixed(3),locationScore:1,mandatory,
+    y:parent.y+parent.h+(a.role==='mirror'?.20:.018),
+    supportedBy:parent.id};
+   // No floating decorations, no intersecting tabletop objects, no
+   // support footprint overhang and no bleeding into adjacent rooms.
+   const corners=[[1,1],[1,-1],[-1,1],[-1,-1]].map(([sx,sz])=>
+    worldCell(x+sx*worldSize.w/2,z+sz*worldSize.d/2));
+   if(corners.some(c=>c.gx<0||c.gx>=GRID_W||c.gz<0||c.gz>=GRID_H||
+     layout.grid[c.gz*GRID_W+c.gx]!==room.id))continue;
+   if(Math.abs(x-parent.x)+worldSize.w/2>parent.w/2-.015||
+      Math.abs(z-parent.z)+worldSize.d/2>parent.d/2-.015)continue;
+   if(!footprintOverlap(spec,parent))continue;
+   if(others.some(q=>volumeOverlap(spec,q,.015)))continue;
+   return spec;
+  }
  }
  return null;
 }
@@ -171,9 +210,9 @@ export function populateRooms(layout,seed=layout.seed){
    const semantic=furnitureScore(a,type,counts);
    let spec=onSurface(room,a,objects,semantic,mandatory,layout);
    if(!spec){
-    if(['computer','kitchenTool','mirror'].includes(a.role)||a.model==='lampsquaretable')
+    if(SURFACE_ONLY.has(a.model))
      return false;
-    let best=null,bestScore=-1e8;
+    const candidates=[];
     for(const p of candidatePositions(room,a,objects,layout)){
      if(!fits(room,p,objects,door,layout,a.role==='rug'))continue;
      const positional=locationScore(a,room,p,objects,door,layout);
@@ -186,12 +225,51 @@ export function populateRooms(layout,seed=layout.seed){
      const target=focus;
      const directional=DIRECTIONAL_ROLES.has(a.role);
      const face=directional?facingScore(p.angle,p,target):.5;
+     const width=room.xMax-room.xMin,depth=room.zMax-room.zMin;
+     // In a long, narrow lounge the sofa and TV belong on the short end
+     // walls, facing down the length. A cross-room arrangement can otherwise
+     // form an impenetrable furniture barricade even with perfect AABBs.
+     const longLounge=(room.type==='lounge'||room.type==='games')&&
+       (a.role==='sofa'||a.role==='screen')&&p.kind==='wall';
+     const endWall=width<depth*.78?Math.abs(Math.sin(p.angle))<.5:
+       depth<width*.78?Math.abs(Math.sin(p.angle))>.5:false;
+     const rectangularity=room.area/(width*depth);
+     // Workstations in hooked/L-shaped rooms must sit at the end of a wing,
+     // not in the narrow connector to another part of the room.
+     const workEnd=(a.role==='desk'&&rectangularity<.65)?
+       1.2*distance(p,door):0;
+     const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd;
      const score=3.1*positional+1.45*companionFit+
-       (directional?.95*face:0)+
+       (directional?.95*face:0)+architectural+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
-     if(score>bestScore){best=p;bestScore=score;best.locationScore=positional;}
+     candidates.push({p,score,locationScore:positional});
     }
-    if(!best)return false;
+    if(!candidates.length)return false;
+    candidates.sort((a,b)=>b.score-a.score);
+    // Evaluate a spatially diverse shortlist, not just many nearly-identical
+    // 25cm offsets around one attractive but impassable furniture position.
+    const shortlist=[];
+    for(const item of candidates){
+     if(shortlist.some(q=>distance(item.p,q.p)<.56))continue;
+     shortlist.push(item);
+     if(shortlist.length>= (mandatory?7:4))break;
+    }
+    let chosen=shortlist[0];
+    if(a.solid){
+     const baseline=roomAccessibility(layout,room,objects,{resolution:2,radius:.21});
+     let navBest=-Infinity;
+     for(const item of shortlist){
+      const nav=roomAccessibility(layout,room,
+       [...objects,{...item.p,roomId:room.id,solid:true}],
+       {resolution:2,radius:.21});
+      const adjusted=item.score*.25+nav.ratio*5-(nav.doorOpen?0:5);
+      const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
+      if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
+      if(adjusted>navBest){navBest=adjusted;chosen=item;}
+     }
+     if(!mandatory && navBest===-Infinity)return false;
+    }
+    const best={...chosen.p,locationScore:chosen.locationScore};
     spec={model:a.model,x:best.x,z:best.z,w:best.w,d:best.d,
      modelW:a.w,modelD:a.d,h:a.h,angle:best.angle,
      solid:a.solid,roomId:room.id,role:a.role,
@@ -214,12 +292,13 @@ export function populateRooms(layout,seed=layout.seed){
    if(!done)(room.missingEssentials??=[]).push(model);
   }
   const target=Math.min(13,Math.max(9,Math.round(room.area/3.2)));
+  const allowed=ROOM_ROLE_ALLOW[room.type];
   const ranked=FURNITURE.map(a=>({a,score:furnitureScore(a,type,counts)}))
-   .filter(o=>!used.has(o.a.model)&&o.score>1)
+   .filter(o=>allowed.has(o.a.role)&&!used.has(o.a.model)&&o.score>1)
    .sort((a,b)=>b.score-a.score);
   for(const {a} of ranked){
    if(objects.length>=target)break;
-   const max=({plant:3,lighting:3,diningChair:4,chair:3,computer:2,storage:2,decoration:2,media:2})[a.role]||1;
+   const max=({plant:3,lighting:3,diningChair:4,chair:3,computer:2,storage:2,decoration:2,media:2,bed:1,sofa:2,screen:1,desk:1,diningTable:1,bath:1,toilet:1})[a.role]||1;
    if((counts[a.role]||0)>=max)continue;
    if(!add(a) && a.w>.55 && a.d>.55){
     // Secondary props may be compact, but never distort their proportions.
@@ -231,7 +310,7 @@ export function populateRooms(layout,seed=layout.seed){
   // Secondary dressing layer: smaller, functional accents reduce empty corners
   // without inserting extra large pieces or violating the room's intended use.
   const smallAccents=FURNITURE
-   .filter(a=>!used.has(a.model)&&
+   .filter(a=>allowed.has(a.role)&&!used.has(a.model)&&
      ['plant','lighting','rug','decoration','media'].includes(a.role)&&
      furnitureScore(a,type,counts)>.36)
    .sort((a,b)=>b.role==='plant'&&a.role!=='plant'?1:
@@ -245,10 +324,37 @@ export function populateRooms(layout,seed=layout.seed){
     if(add({...a,w:a.w*factor,d:a.d*factor,h:a.h*factor}))break;
    }
   }
+  // Remove only optional floor pieces if they sever the usable room into
+  // isolated pockets. Required furniture never disappears during repair.
+  let access=roomAccessibility(layout,room,objects);
+  while((!access.doorOpen||access.ratio<.82) &&
+        objects.some(p=>!p.mandatory&&p.solid)){
+   const index=objects.findLastIndex(p=>!p.mandatory&&p.solid);
+   const removed=objects.splice(index,1)[0];removed._removed=true;
+   for(let i=objects.length-1;i>=0;i--)
+    if(objects[i].supportedBy===removed.id){objects[i]._removed=true;objects.splice(i,1);}
+   access=roomAccessibility(layout,room,objects);
+  }
+  // Small low-profile rugs make sparse rooms feel dressed without narrowing
+  // an already tight circulation route.
+  if(objects.length<4 && allowed.has('rug')){
+   for(const rug of FURNITURE.filter(p=>p.role==='rug')){
+    if(objects.length>=4)break;
+    if(!objects.some(p=>p.role==='rug'))add(rug);
+   }
+   access=roomAccessibility(layout,room,objects);
+  }
+  room.accessibility=+access.ratio.toFixed(3);
   room.furnitureCount=objects.length;
   room.placementDensity=+(objects.length/room.area).toFixed(2);
  }
- layout.props=placed;
- layout.obstacles=obstacles;
+ // Rebuild from the repaired room collections. No stale obstacles or props
+ // may survive a later removal.
+ layout.props=placed.filter(p=>!p._removed);
+ layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
+   ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
+ layout.qualityReport={collisions:collisionPairs(layout.props),
+   accessibleRooms:layout.rooms.filter(r=>r.accessibility>=.82).length,
+   roomCount:layout.rooms.length};
  return layout;
 }

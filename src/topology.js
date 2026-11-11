@@ -156,10 +156,29 @@ function topologicalGrid(rng,style){
   roomsCells.splice(option.index,1,option.split.left,option.split.right);
  }
  if(roomsCells.length<5||roomsCells.length>22)throw Error('Building grammar produced invalid room count');
+ // Assign wide, furniture-heavy functions to naturally spacious parcels.
+ // Purely shuffling room labels can put a dining table into a narrow L-shaped
+ // passage even when an adjacent room is much more suitable.
  const chosen=shuffle(Object.keys(ROOM_TYPES),rng),rooms=[];
+ const selected=Array.from({length:roomsCells.length},(_,i)=>chosen[i%chosen.length]);
+ const demand={dining:10,lounge:9,kitchen:8,suite:7,games:6,
+   studio:5,library:4,wellness:3,office:2,gallery:1,bath:0};
+ const spatialRank=roomsCells.map((cells,i)=>{
+  const xs=cells.map(c=>c.gx),zs=cells.map(c=>c.gz);
+  const width=Math.max(...xs)-Math.min(...xs)+1;
+  const depth=Math.max(...zs)-Math.min(...zs)+1;
+  const compactness=cells.length/(width*depth);
+  const score=cells.length*(.45+.55*compactness)+Math.min(width,depth);
+  return {i,score};
+ }).sort((a,b)=>b.score-a.score);
+ const typesRank=selected.map((type,i)=>({type,i}))
+   .sort((a,b)=>(demand[b.type]??0)-(demand[a.type]??0)||a.i-b.i);
+ const assigned=new Array(roomsCells.length);
+ for(let j=0;j<typesRank.length;j++)
+  assigned[spatialRank[j].i]=typesRank[j].type;
  for(let i=0;i<roomsCells.length;i++){
   const cells=roomsCells[i].map(c=>({...c,...cellWorld(c.gx,c.gz)}));
-  const id=i+1,type=chosen[i%chosen.length];
+  const id=i+1,type=assigned[i];
   for(const c of cells)grid[idx(c.gx,c.gz)]=id;
   const x=cells.reduce((s,c)=>s+c.x,0)/cells.length,z=cells.reduce((s,c)=>s+c.z,0)/cells.length;
   rooms.push({id,type,kind:type,name:ROOM_TYPES[type].name,

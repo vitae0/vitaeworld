@@ -1,0 +1,25 @@
+name: Interior Quality CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/interior-quality-and-clearance]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Interior geometry and layout tests
+        run: npm test
+      - name: Production build
+        run: npm run build
