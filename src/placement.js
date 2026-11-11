@@ -191,9 +191,8 @@ function onSurface(room,a,others,score,mandatory,layout){
     worldCell(x+sx*worldSize.w/2,z+sz*worldSize.d/2));
    if(corners.some(c=>c.gx<0||c.gx>=GRID_W||c.gz<0||c.gz>=GRID_H||
      layout.grid[c.gz*GRID_W+c.gx]!==room.id))continue;
-   if(Math.abs(x-parent.x)+(worldSize.w-parent.w)/2>.0001+
-        (parent.w-worldSize.w)/2+Math.max(0,Math.abs(x-parent.x)) &&
-      parent.angle===0)continue; // harmless strict guard for degenerate sizes
+   if(Math.abs(x-parent.x)+worldSize.w/2>parent.w/2-.015||
+      Math.abs(z-parent.z)+worldSize.d/2>parent.d/2-.015)continue;
    if(!footprintOverlap(spec,parent))continue;
    if(others.some(q=>volumeOverlap(spec,q,.015)))continue;
    return spec;
@@ -213,7 +212,7 @@ export function populateRooms(layout,seed=layout.seed){
    if(!spec){
     if(SURFACE_ONLY.has(a.model))
      return false;
-    let best=null,bestScore=-1e8;
+    const candidates=[];
     for(const p of candidatePositions(room,a,objects,layout)){
      if(!fits(room,p,objects,door,layout,a.role==='rug'))continue;
      const positional=locationScore(a,room,p,objects,door,layout);
@@ -229,9 +228,33 @@ export function populateRooms(layout,seed=layout.seed){
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
-     if(score>bestScore){best=p;bestScore=score;best.locationScore=positional;}
+     candidates.push({p,score,locationScore:positional});
     }
-    if(!best)return false;
+    if(!candidates.length)return false;
+    candidates.sort((a,b)=>b.score-a.score);
+    // Evaluate a spatially diverse shortlist, not just many nearly-identical
+    // 25cm offsets around one attractive but impassable furniture position.
+    const shortlist=[];
+    for(const item of candidates){
+     if(shortlist.some(q=>distance(item.p,q.p)<.56))continue;
+     shortlist.push(item);
+     if(shortlist.length> (mandatory?24:10))break;
+    }
+    let chosen=shortlist[0];
+    if(a.solid){
+     const baseline=roomAccessibility(layout,room,objects);
+     let navBest=-Infinity;
+     for(const item of shortlist){
+      const nav=roomAccessibility(layout,room,
+       [...objects,{...item.p,roomId:room.id,solid:true}]);
+      const adjusted=item.score*.25+nav.ratio*5-(nav.doorOpen?0:5);
+      const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
+      if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
+      if(adjusted>navBest){navBest=adjusted;chosen=item;}
+     }
+     if(!mandatory && navBest===-Infinity)return false;
+    }
+    const best={...chosen.p,locationScore:chosen.locationScore};
     spec={model:a.model,x:best.x,z:best.z,w:best.w,d:best.d,
      modelW:a.w,modelD:a.d,h:a.h,angle:best.angle,
      solid:a.solid,roomId:room.id,role:a.role,
@@ -295,6 +318,15 @@ export function populateRooms(layout,seed=layout.seed){
    const removed=objects.splice(index,1)[0];removed._removed=true;
    for(let i=objects.length-1;i>=0;i--)
     if(objects[i].supportedBy===removed.id){objects[i]._removed=true;objects.splice(i,1);}
+   access=roomAccessibility(layout,room,objects);
+  }
+  // Small low-profile rugs make sparse rooms feel dressed without narrowing
+  // an already tight circulation route.
+  if(objects.length<4 && allowed.has('rug')){
+   for(const rug of FURNITURE.filter(p=>p.role==='rug')){
+    if(objects.length>=4)break;
+    if(!objects.some(p=>p.role==='rug'))add(rug);
+   }
    access=roomAccessibility(layout,room,objects);
   }
   room.accessibility=+access.ratio.toFixed(3);
