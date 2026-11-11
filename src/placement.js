@@ -238,15 +238,16 @@ export function populateRooms(layout,seed=layout.seed){
     for(const item of candidates){
      if(shortlist.some(q=>distance(item.p,q.p)<.56))continue;
      shortlist.push(item);
-     if(shortlist.length> (mandatory?24:10))break;
+     if(shortlist.length>= (mandatory?7:4))break;
     }
     let chosen=shortlist[0];
     if(a.solid){
-     const baseline=roomAccessibility(layout,room,objects);
+     const baseline=roomAccessibility(layout,room,objects,{resolution:2,radius:.21});
      let navBest=-Infinity;
      for(const item of shortlist){
       const nav=roomAccessibility(layout,room,
-       [...objects,{...item.p,roomId:room.id,solid:true}]);
+       [...objects,{...item.p,roomId:room.id,solid:true}],
+       {resolution:2,radius:.21});
       const adjusted=item.score*.25+nav.ratio*5-(nav.doorOpen?0:5);
       const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
       if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
