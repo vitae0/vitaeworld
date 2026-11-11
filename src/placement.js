@@ -233,7 +233,12 @@ export function populateRooms(layout,seed=layout.seed){
        (a.role==='sofa'||a.role==='screen')&&p.kind==='wall';
      const endWall=width<depth*.78?Math.abs(Math.sin(p.angle))<.5:
        depth<width*.78?Math.abs(Math.sin(p.angle))>.5:false;
-     const architectural=longLounge?(endWall?5.2:-1.0):0;
+     const rectangularity=room.area/(width*depth);
+     // Workstations in hooked/L-shaped rooms must sit at the end of a wing,
+     // not in the narrow connector to another part of the room.
+     const workEnd=(a.role==='desk'&&rectangularity<.65)?
+       1.2*distance(p,door):0;
+     const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd;
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+architectural+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
