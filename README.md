@@ -26,6 +26,33 @@ The floor plan uses a 25×19 occupancy grid of 1.3m cells. Room splitting valida
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
 
+## Interior quality pass (Lab 05)
+
+The current scope is **interiors only**: it generates walkable building floorplans
+and furnishes their rooms. It does not stream a city or generate an exterior world.
+
+- **Room-specific furnishing:** optional objects obey a room-role allowlist; a
+  generic style affinity cannot populate a bathroom with unrelated electronics.
+- **Real volumes:** non-rug 3D furniture and accessories cannot overlap, even
+  when an accessory has no physics collider. Flat rugs may sit beneath furniture.
+- **Supported accessories:** monitors, lamps, mirrors and small tabletop objects
+  are checked against the **rotated dimensions** of their actual support, room
+  ownership and other objects. Their vertical placement is above the support,
+  not intersecting it.
+- **Walkable composition:** a fast, coarse navigation grid guides furniture
+  placement. A 4×4-per-cell grid checks each completed room; optional floor
+  objects are removed if they create inaccessible pockets. A room-level
+  `accessibility` ratio and a `qualityReport` are returned with the layout.
+- **Architectural composition:** wide room functions prefer suitable parcels;
+  narrow lounges place seating/screens toward end walls and hooked studio rooms
+  keep workstations away from corridor chokepoints.
+- **Determinism:** the same seed + building style yields the same interior.
+
+`src/interior-quality.js` has standalone geometry/navigation checks, with
+regressions in `tests/interior-quality.test.mjs`. The validation is conservative
+2D/height-box approximation; inspecting actual GLB silhouettes and shadows
+still requires a browser/asset audit.
+
 ## Try it
 
 Requires Node.js 20.19+ and npm:
