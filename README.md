@@ -14,11 +14,11 @@ chooses a deterministic preset appropriate to the building programme.
 Style selection is included in the shared URL and local per-world
 interaction key.
 
-**26 new procedural surface families:** Polished concrete, microcement,
+**27 new procedural surface families:** Polished concrete, microcement,
 dark oak, walnut, light parquet, herringbone, black marble, travertine,
 terrazzo, industrial epoxy, rusty metal, aged tile, smooth white,
 warm plaster, greige, charcoal panels, wood slats, raw concrete,
-dark brick, limewash, matte white ceiling, acoustic panels,
+dark brick, limewash, aged plaster, matte white ceiling, acoustic panels,
 dark ceiling, brushed steel, dark metal and light oak. Implemented
 locally in `src/procedural-surfaces.js` as deterministic 256×256
 repeatable textures. They supplement the 10 licensed Poly Haven
