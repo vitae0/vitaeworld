@@ -130,3 +130,16 @@ test('fourteen interior styles each produce reproducible final-finish geometry',
   assert.equal(a.interiorAudit.counts.unsafeWindows,0);
  }
 });
+
+test('hotel signage numbers uniquely identify floor and room',()=>{
+ const b=generateBuilding('hotel-numbers','grid',2,'hotel','boutiqueHotel');
+ const suites=b.stories.flatMap((story)=>story.layout.signage
+  .filter(sign=>sign.type==='suite')
+  .map(sign=>({floor:story.index,label:sign.label})));
+ assert.ok(suites.length>=2);
+ assert.equal(new Set(suites.map(s=>s.label)).size,suites.length,
+  'room numbers must not repeat on different hotel floors');
+ for(const s of suites){
+  assert.ok(s.label.startsWith('ODA '+String(s.floor+1)));
+ }
+});
