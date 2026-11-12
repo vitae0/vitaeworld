@@ -10,6 +10,7 @@ import {addWindowVisuals} from './window-visuals.js';
 import {daylightAt} from './daylight.js';
 import {stairwellRimSegments} from './floor-visibility.js';
 import {addWallFeatureVisuals} from './wall-feature-visuals.js';
+import {addInteriorFitoutVisuals} from './interior-fitout-visuals.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -137,6 +138,9 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  if(wallMesh.instanceColor)wallMesh.instanceColor.needsUpdate=true;
  root.add(wallMesh);
  addWallFeatureVisuals(root,layout,owned);
+ const fitoutVisuals=addInteriorFitoutVisuals(root,layout,owned,{
+  trimMat,tileMat:floorTileMat,textileMat,ceilingMat,lightColor:palette.light
+ });
  // Window glass uses actual openings cut from the solid exterior walls.
  // Rendered as four instanced batches with shared low-poly trim.
  addWindowVisuals(root,layout,owned);
@@ -229,6 +233,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  return {
   root,floorDeck,detachedFloor,ceiling,detailGroup,
   colors:palette,paletteName:palette.name,
+  fitoutStats:{parts:fitoutVisuals.count,batches:fitoutVisuals.batches},
   setDaylight,
   setLightingActive(value){hemi.visible=Boolean(value);sun.visible=Boolean(value);},
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
