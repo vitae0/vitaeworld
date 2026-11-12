@@ -16,6 +16,8 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
  });
  const stairs=buildStairVisuals(scene,building);
  let current=0,firstPerson=false,disposed=false,playerY=0;
+ let qualityBudget={practicalLights:2,showClutter:true};
+ levels.forEach(layer=>layer.setQualityBudget(qualityBudget));
  function update(){
   const states=floorVisibilityPlan(building,current,firstPerson,playerY);
   levels.forEach((layer,i)=>{
@@ -40,6 +42,10 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
   setInteractionState(item,on){
    return levels[item.level]?.setInteractionState(item,on)??false;
   },
+  setQualityBudget(next){
+   qualityBudget={...qualityBudget,...next};
+   for(const level of levels)level.setQualityBudget(qualityBudget);
+  },
   tick(dt){
    for(const layer of levels)if(layer.root.visible&&layer.detailGroup.visible)
     layer.tick(dt);
@@ -49,7 +55,10 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
    return {allStoreysVisible:states.every(s=>s.rooms&&s.deck),
     current,tiers:states.map(s=>s.tier),
     full:states.filter(s=>s.detail).length,
-    shells:states.filter(s=>!s.detail).length};
+    shells:states.filter(s=>!s.detail).length,
+    practicalLights:levels.reduce((n,l)=>n+l.getLightReport().active,0),
+    finishParts:levels.reduce((n,l)=>n+l.fitoutStats.parts,0),
+    decorationVisible:qualityBudget.showClutter!==false};
   },
   setDaylight(hour){
    for(const layer of levels)layer.setDaylight(hour);
