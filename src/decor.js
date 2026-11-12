@@ -92,9 +92,9 @@ export function generateDecorations(layout,seed=layout.seed){
    const kind=R(rng,kindsFor(room.type));
    const d={id:'d-'+room.id+'-'+decorations.length,roomId:room.id,
     source:'wall',kind,x:wall.x,z:wall.z,angle:wall.angle,
-    y:kind==='art'||kind==='poster'?1.91:kind==='shelf'?2.32:2.28,
-    w:kind==='art'||kind==='poster'?.78:kind==='shelf'?.80:.25,
-    h:kind==='art'||kind==='poster'?.65:kind==='shelf'?.42:.28,
+    y:(kind==='art'||kind==='poster') ? 1.91 : kind==='shelf' ? 2.32 : 2.28,
+    w:(kind==='art'||kind==='poster') ? .78 : kind==='shelf' ? .80 : .25,
+    h:(kind==='art'||kind==='poster') ? .65 : kind==='shelf' ? .42 : .28,
     d:.11,mood:mood.name,color:mood.ink,paper:mood.paper,
     accent:mood.accent,leaf:mood.leaf,variant:Math.floor(rng()*5)};
    // Eye-level pictures read as a lived-in room. If a tall bookshelf is
