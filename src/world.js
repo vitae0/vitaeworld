@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import {ROOM_THEMES,TILE,WALL_HEIGHT,GRID_W,GRID_H} from './layout.js';
 import {addFurniture} from './assets.js';
+import {addDecorVisuals} from './decor-visuals.js';
 
 const PALETTES=[
- {name:'Aurora',wall:0xd0e0e3,trim:0x294856,floor:0x546d77,hall:0x214a55,light:0x80ffe3},
- {name:'Nocturne',wall:0xdcd4df,trim:0x493852,floor:0x78677d,hall:0x51405d,light:0xffcfaa},
- {name:'Solstice',wall:0xd9ddcf,trim:0x345244,floor:0x748879,hall:0x2e574d,light:0xb9f9c8}
+ {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
+ {name:'Nocturne',wall:0xddd6d1,trim:0x575052,floor:0x8b7f82,hall:0x686065,light:0xffcda9},
+ {name:'Solstice',wall:0xe5e4d8,trim:0x586c5b,floor:0x9aa08c,hall:0x747e71,light:0xffe5ba}
 ];
 export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  const palette=PALETTES[paletteIndex%PALETTES.length];
@@ -23,7 +24,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  function geometry(w,h,d){const g=new THREE.BoxGeometry(w,h,d);owned.add(g);return g;}
  const neutral=material(0xffffff),ceilingMat=material(0xdde5e8);
  const wallMat=material(0xffffff),trimMat=material(palette.trim);
- const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:2.2});
+ const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:.80});
  // Floors are one GPU draw call. Per-instance colours encode room character.
  const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),neutral,layout.floors.length);
  floors.name='SemanticFloorTiles';
@@ -33,7 +34,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
    floors.setMatrixAt(i,tmp.matrix);
    const room=layout.rooms.find(r=>r.id===tile.roomId);
    const base=tile.roomId===0?color(palette.hall):
-     tint(ROOM_THEMES[room.type],palette.floor,.52);
+     tint(ROOM_THEMES[room.type],palette.floor,.73);
    // Subtle architectural floor variation, tied to geometry rather than RNG.
    const shade=((tile.gx*7+tile.gz*11)%9)*.006;
    base.lerp(color(0xffffff),shade);
@@ -93,26 +94,10 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  highlightsMesh.instanceMatrix.needsUpdate=true;
  if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
  root.add(highlightsMesh);
- // Wall art turns long irregular wall runs into recognizable places.
- const art=new THREE.Group();root.add(art);
- const artFrame=material(palette.trim);
- const artMatByType=new Map();
- for(const room of layout.rooms){
-   const candidate=room.cells.find(c=>{
-     const {gx,gz}=c;
-     const n=room.side==='north'?gz-1:gz+1;
-     return n<0||n>=GRID_H||layout.grid[n*GRID_W+gx]===-1;
-   });
-   if(!candidate)continue;
-   const z=candidate.z+(room.side==='north'?-TILE/2+.095:TILE/2-.095);
-   const outer=geometry(1.4,.8,.07);
-   const frame=new THREE.Mesh(outer,artFrame);frame.position.set(candidate.x,1.94,z);art.add(frame);
-   if(!artMatByType.has(room.type))artMatByType.set(room.type,material(ROOM_THEMES[room.type]));
-   const inset=new THREE.Mesh(geometry(1.24,.65,.084),artMatByType.get(room.type));
-   inset.position.set(candidate.x,1.94,z+(room.side==='north'?.012:-.012));art.add(inset);
- }
- const hemi=new THREE.HemisphereLight(0xe9f7ff,0x536e70,2.15);root.add(hemi);
- const sun=new THREE.DirectionalLight(0xfff4e6,1.55);
+ // Theme-consistent art, shelves and tabletop details share four GPU batches.
+ addDecorVisuals(root,layout.decorations||[],owned);
+ const hemi=new THREE.HemisphereLight(0xfff2e5,0x716b65,1.65);root.add(hemi);
+ const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
  const items=new THREE.Group();items.name='SemanticFurniture';root.add(items);
  for(const p of layout.props)addFurniture(items,p,owned,onAsset);

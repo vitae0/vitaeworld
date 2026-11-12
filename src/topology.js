@@ -3,7 +3,7 @@
 // All world/physics data is independent from Three.js.
 import {ROOM_TYPES} from './semantics.js';
 
-export const TILE=1.3, GRID_W=25, GRID_H=19, WALL_HEIGHT=3.25;
+export const TILE=1.26, GRID_W=25, GRID_H=19, WALL_HEIGHT=3.25;
 export const HALL=0, OUTSIDE=-1;
 const DOOR_WIDTH=1.10, WALL_THICKNESS=.13;
 const DIRS=[{dx:1,dz:0},{dx:-1,dz:0},{dx:0,dz:1},{dx:0,dz:-1}];
@@ -43,11 +43,11 @@ function reachableCells(grid,id){
  return seen.size;
 }
 export const BUILDING_TYPES=Object.freeze({
- compact:{name:'Compact Residence',description:'Small footprint, short cross circulation',targetRooms:8,maxRoomCells:31},
- central:{name:'Central Atrium',description:'Large shared centre and radial circulation',targetRooms:11,maxRoomCells:29},
- grid:{name:'Urban Grid',description:'Regular intersecting streets and corridors',targetRooms:16,maxRoomCells:27},
- courtyard:{name:'Courtyard Loop',description:'Rings around an open-air courtyard',targetRooms:14,maxRoomCells:27},
- branched:{name:'Connected Wings',description:'Short side wings with a connected spine',targetRooms:12,maxRoomCells:29}
+ compact:{name:'Compact Residence',description:'Small footprint, short cross circulation',targetRooms:10,maxRoomCells:25},
+ central:{name:'Central Atrium',description:'Large shared centre and radial circulation',targetRooms:14,maxRoomCells:24},
+ grid:{name:'Urban Grid',description:'Regular intersecting streets and corridors',targetRooms:18,maxRoomCells:23},
+ courtyard:{name:'Courtyard Loop',description:'Rings around an open-air courtyard',targetRooms:17,maxRoomCells:23},
+ branched:{name:'Connected Wings',description:'Short side wings with a connected spine',targetRooms:14,maxRoomCells:24}
 });
 export const BUILDING_TYPE_IDS=Object.freeze(Object.keys(BUILDING_TYPES));
 function topologicalGrid(rng,style){
@@ -131,7 +131,7 @@ function topologicalGrid(rng,style){
    const values=cells.map(c=>c[axis]),a=Math.min(...values),b=Math.max(...values);
    for(let cut=a+1;cut<b;cut++){
     const left=cells.filter(c=>c[axis]<=cut),right=cells.filter(c=>c[axis]>cut);
-    if(Math.min(left.length,right.length)<8 || !hasDoor(left)||!hasDoor(right))continue;
+    if(Math.min(left.length,right.length)<10 || !hasDoor(left)||!hasDoor(right))continue;
     if(!connected(left)||!connected(right))continue;
     // Balance room sizes and prefer to avoid skinny one-cell strips.
     const sizeBias=Math.abs(left.length-right.length)*.06;
