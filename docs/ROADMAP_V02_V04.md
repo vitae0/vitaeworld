@@ -3,6 +3,13 @@
 **Karar (12 Kasım 2026):** Önümüzdeki üç aşamanın tek odağı:
 
 ## 1. Etkileşimli mekânlar (V0.2)
+ 
+**Durum:** İlk nesne-etkileşim motoru, bağlamsal KULLAN düğmesi,
+E/touch ortak eylem yolu, kapı fiziksel geçişi ve durumlu mobilyalar
+Lab 12'de uygulandı. Tam iskelet animasyonları, karakter/nesne
+IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
+üzerindeki görsel testler tamamlanmadı.
+
 
 **Amaç:** Mekândaki nesneler yalnızca dekor değil, kullanılabilir olsun.
 
