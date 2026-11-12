@@ -78,10 +78,12 @@ function topologicalGrid(rng,style){
   fillRect(10,14,8,10,(x,z)=>{grid[idx(x,z)]=OUTSIDE;});
   atrium={x:0,z:0,kind:'open-air'};
  }else if(style==='branched'){
-  x0=1;x1=23;z0=2;z1=16;
+  // The wings should frame 3-5 tile-deep rooms. The former closely
+  // spaced cross-halls left 2x8 bedroom strips with no usable proportions.
+  x0=1;x1=23;z0=3;z1=14;
   fillRect(x0,x1,8,9);
-  fillRect(6,7,4,13);fillRect(16,17,4,13);
-  fillRect(7,16,4,5);fillRect(7,16,12,13);
+  fillRect(6,7,3,14);fillRect(16,17,3,14);
+  fillRect(7,16,3,4);fillRect(7,16,13,14);
  }
  // Each component not already circulation is a room candidate.
  // Subdivide oversized bays only when BOTH resulting rooms can open on a corridor.
