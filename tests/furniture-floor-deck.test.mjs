@@ -10,18 +10,18 @@ test('floor culling preserves the upstairs slab while standing downstairs',()=>{
  const building=generateBuilding('under-ceiling-deck','villa',2,'family_house');
  const down=floorVisibilityPlan(building,0,true,0);
  assert.deepEqual(down,[
-  {rooms:true,deck:true,ceiling:true},
-  {rooms:false,deck:true,ceiling:false}
+  {rooms:true,deck:true,ceiling:true,detail:true,tier:'full'},
+  {rooms:true,deck:true,ceiling:false,detail:true,tier:'full'}
  ]);
  const third=floorVisibilityPlan(building,0,false,0);
  assert.deepEqual(third,[
-  {rooms:true,deck:true,ceiling:false},
-  {rooms:false,deck:true,ceiling:false}
+  {rooms:true,deck:true,ceiling:false,detail:true,tier:'full'},
+  {rooms:true,deck:true,ceiling:false,detail:true,tier:'full'}
  ]);
  const up=floorVisibilityPlan(building,1,true,building.levelHeight);
  assert.deepEqual(up,[
-  {rooms:false,deck:false,ceiling:false},
-  {rooms:true,deck:true,ceiling:true}
+  {rooms:true,deck:true,ceiling:false,detail:true,tier:'full'},
+  {rooms:true,deck:true,ceiling:true,detail:true,tier:'full'}
  ]);
  const mid=floorVisibilityPlan(building,0,true,building.levelHeight*.5);
  assert.ok(mid.every(s=>s.rooms&&s.deck));
@@ -34,7 +34,7 @@ test('floor culling preserves the upstairs slab while standing downstairs',()=>{
 test('single-storey world does not allocate imaginary upper floor decks',()=>{
  const building=generateBuilding('single-story','compact',1,'cottage');
  assert.deepEqual(floorVisibilityPlan(building,0,false,0),
-  [{rooms:true,deck:true,ceiling:false}]);
+  [{rooms:true,deck:true,ceiling:false,detail:true,tier:'full'}]);
 });
 test('window blockers affect tall furniture, not low desks or sofas',()=>{
  const room={id:7},opening={roomId:7,x:0,z:3,
