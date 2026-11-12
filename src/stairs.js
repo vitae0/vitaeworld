@@ -74,7 +74,9 @@ export function sampleWalkableGround(building,x,z,currentY,radius=.29){
   if(!isWalkable(story.layout,x,z,radius))continue;
   candidates.push({height,level:story.index,onStair:false,t:0});
  }
- candidates.sort((a,b)=>Math.abs(a.height-currentY)-Math.abs(b.height-currentY)||
-  Number(b.onStair)-Number(a.onStair));
+ // On the flight the slope is the ground. Flat lower-storey tiles
+ // must not win solely because they are closer to the previous Y value.
+ candidates.sort((a,b)=>Number(b.onStair)-Number(a.onStair)||
+  Math.abs(a.height-currentY)-Math.abs(b.height-currentY));
  return candidates[0]||null;
 }
