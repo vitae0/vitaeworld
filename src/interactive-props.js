@@ -27,7 +27,7 @@ export function buildInteractivePropVisuals(propHolders,props,owned){
      Math.min(1,p.modelW*.78),Math.min(1.6,p.h*.86),.035),doorMaterial);
    panel.position.x=Math.min(1,p.modelW*.78)*.5;
    pivot.add(panel);holder.add(pivot);
-   target={type:'hinge',node:pivot};
+   target={type:'hinge',node:pivot,goal:0};
   }else if(p.role==='screen'){
    const panel=create(new THREE.BoxGeometry(
      Math.max(.3,p.modelW*.85),Math.max(.17,p.h*.50),.015),screenMaterial);
@@ -57,9 +57,18 @@ export function buildInteractivePropVisuals(propHolders,props,owned){
  return {
   setState(propId,on){
    const item=shapes.get(propId);if(!item)return false;
-   if(item.type==='hinge')item.node.rotation.y=on?-1.16:0;
+   if(item.type==='hinge')item.goal=on?-1.16:0;
    else item.node.visible=Boolean(on);
    return true;
+  },
+  update(dt){
+   const step=Math.max(0,Math.min(dt,.05))*5.6;
+   for(const item of shapes.values()){
+    if(item.type!=='hinge')continue;
+    const delta=item.goal-item.node.rotation.y;
+    if(Math.abs(delta)<.0001)continue;
+    item.node.rotation.y+=Math.sign(delta)*Math.min(Math.abs(delta),step);
+   }
   },
   get count(){return shapes.size;}
  };
