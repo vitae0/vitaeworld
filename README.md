@@ -26,6 +26,35 @@ The floor plan uses a 25×19 occupancy grid of 1.3m cells. Room splitting valida
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
 
+## Interior character pass (Lab 06)
+
+**Scope remains the interior generator.** This version aims for smaller, more
+believable rooms with a coherent, lived-in visual language rather than bigger
+empty exhibition halls.
+
+- The grid cell size is now **1.26 m** (previously 1.30 m), so the same
+  floorplan uses approximately 6% less floor area; compact and wing layouts
+  also attempt smaller connected parcels. Splits require at least ten cells
+  per side, preventing unusable closets from being assigned large furniture.
+- A seeded **building-wide design language** ties the colours and accents of
+  neighbouring rooms together. Individual rooms occasionally vary it.
+- `src/decor.js` generates wall-mounted artwork, shelves and sconces,
+  plus small tabletop objects (books, candles, vases, dishes, pencils and
+  plants). Wall anchors avoid door throats and cut corners. Surface objects
+  must fit their actual parents and pass height-aware collision checks.
+- `src/decor-visuals.js` renders all procedural decorations in **four
+  instanced draw-call batches**, without fetching extra decorative GLB files.
+- Furniture physics remain distinct from dressing: decorations do not
+  mysteriously block passage. `layout.decorations`, `room.decorMood` and
+  `room.decorationCount` are inspectable results.
+- The material palettes and scene lighting are warmer and less fluorescent.
+  The object counter includes both 3D furniture assets and decorations.
+
+Use `npm test` to run the existing layout/nav checks plus
+`tests/decor.test.mjs` for support, doorway, geometry and determinism
+regressions. Visual composition and downloaded mesh orientation still need
+browser-based inspection before claiming photorealism.
+
 ## Interior quality pass (Lab 05)
 
 The current scope is **interiors only**: it generates walkable building floorplans
