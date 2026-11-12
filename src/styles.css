@@ -249,3 +249,18 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
  color:#a4d7ca;letter-spacing:.55px;padding:9px 0;
  border-bottom:1px solid rgba(153,207,192,.22)}
 @media(max-width:800px){#interiorStyle{min-height:44px}}
+
+/* Lab 19: unobtrusive QA status and device-specific visual budgets. */
+.interiorAudit{display:flex;align-items:center;justify-content:space-between;
+ margin:10px 0;padding:10px 0;gap:8px;border-bottom:1px solid rgba(163,220,204,.22);
+ color:#b1d5ca;font-size:9px;font-weight:700;letter-spacing:.5px}
+#interiorQuality{font-size:10px;color:#e9fbe9;
+ font-variant-numeric:tabular-nums}
+#performanceMode{display:block;min-height:41px;width:100%;margin:7px 0;
+ padding:8px 10px;border-radius:7px;border:1px solid rgba(149,215,196,.4);
+ background:#102a34;color:#ecfff8;font:700 11px system-ui;cursor:pointer}
+#performanceMode:focus-visible{outline:2px solid #a1ffda;outline-offset:2px}
+#performanceMode option{background:#102734}
+.performanceInfo{font-size:9px;color:#a9d6c9;letter-spacing:.45px;
+ margin:5px 0 10px;font-variant-numeric:tabular-nums}
+@media(max-width:800px){#performanceMode{min-height:44px}}
