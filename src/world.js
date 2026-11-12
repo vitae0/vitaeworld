@@ -38,6 +38,8 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  root.add(detailGroup);
  const decorGroup=new THREE.Group();decorGroup.name='OptionalSmallDressing';
  detailGroup.add(decorGroup);
+ const fixedDecorGroup=new THREE.Group();fixedDecorGroup.name='EssentialLightsAndWallDressings';
+ detailGroup.add(fixedDecorGroup);
  const owned=new Set();
  const tmp=new THREE.Object3D();
  const color=(n)=>new THREE.Color(n);
@@ -211,7 +213,11 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
  detailGroup.add(highlightsMesh);
  // Theme-consistent art, shelves and tabletop details share four GPU batches.
- addModelledDecor(decorGroup,layout.decorations||[],owned,{textileMat});
+ const decorList=layout.decorations||[];
+ addModelledDecor(fixedDecorGroup,decorList.filter(d=>
+  d.source==='wall'||d.source==='ceiling'),owned,{textileMat});
+ addModelledDecor(decorGroup,decorList.filter(d=>
+  d.source==='floor'||d.source==='surface'),owned,{textileMat});
  const hemi=new THREE.HemisphereLight(style?.light||0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
