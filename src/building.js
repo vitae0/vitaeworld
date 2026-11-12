@@ -29,8 +29,13 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2){
  const rooms=stories.flatMap(s=>s.layout.rooms.map(r=>({
   ...r,storey:s.index,globalId:s.index+':'+r.id
  })));
+ // Enter on a real landing cell, never underneath the staircase slope.
+ const start=stairs[0]?{
+  x:stairs[0].start.x-stairs[0].dx*stories[0].layout.tile,
+  z:stairs[0].start.z-stairs[0].dz*stories[0].layout.tile
+ }:stories[0].layout.spawn;
  return {seed:String(seed),buildingType:stories[0].layout.buildingType,
   buildingName:stories[0].layout.buildingName,
   stories,stairs,rooms,levelHeight:STOREY_HEIGHT,
-  spawn:{...stories[0].layout.spawn,y:0},geometryVersion:6};
+  spawn:{...start,y:0},geometryVersion:6};
 }
