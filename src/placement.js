@@ -7,6 +7,7 @@ import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from '.
 // Room identity constrains optional furnishing. Shared traits such as "modern"
 // must not turn a bathroom into an electronics showroom.
 const ROOM_ROLE_ALLOW=Object.freeze({
+ utility:new Set('storage plant lighting decoration rug'.split(' ')),
  suite:new Set('bed sidetable lighting storage chair plant rug decoration bench'.split(' ')),
  lounge:new Set('sofa coffee chair screen mediaStorage media lighting plant rug decoration ottoman storage'.split(' ')),
  studio:new Set('desk deskChair computer storage display lighting plant decoration chair rug'.split(' ')),
@@ -300,7 +301,7 @@ export function populateRooms(layout,seed=layout.seed){
    }
    if(!done)(room.missingEssentials??=[]).push(model);
   }
-  const target=Math.min(13,Math.max(9,Math.round(room.area/3.2)));
+  const target=room.type==='utility'?3:Math.min(13,Math.max(9,Math.round(room.area/3.2)));
   const allowed=ROOM_ROLE_ALLOW[room.type];
   const ranked=FURNITURE.map(a=>({a,score:furnitureScore(a,type,counts)}))
    .filter(o=>allowed.has(o.a.role)&&!used.has(o.a.model)&&o.score>1)
