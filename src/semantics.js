@@ -217,7 +217,29 @@ export const FURNITURE=Object.freeze([
  asset('bathroomcabinet',0.9,0.65,0.9,'wall','storage',{hygiene:2,storage:3,compact:2}),
  asset('coatrackstanding',0.62,0.6,1.7,'corner','storage',{storage:2,vertical:3,compact:2,contemporary:1}),
  asset('benchcushion',1.4,0.72,0.7,'wall','bench',{social:2,recovery:2,soft:2,display:1,contemporary:1}),
- asset('loungesofaottoman',0.95,0.85,0.47,'center','ottoman',{lounge:3,recovery:3,soft:3,center:2},{companion:'sofa'})
+ asset('loungesofaottoman',0.95,0.85,0.47,'center','ottoman',{lounge:3,recovery:3,soft:3,center:2},{companion:'sofa'}),
+ // Verified in Kenney's CC0 Furniture Kit catalog. Additional variants
+ // give the same room language different silhouettes without new dependencies.
+ asset('chaircushion',.83,.78,.94,'center','chair',{lounge:2,social:2,soft:3,warm:1,compact:2}),
+ asset('chairmodernframecushion',.86,.80,.90,'center','chair',{lounge:2,social:2,soft:2,contemporary:3,compact:2}),
+ asset('bench',1.44,.65,.72,'wall','bench',{lounge:1,social:2,hard:2,contemporary:1,display:1}),
+ asset('benchcushionlow',1.37,.70,.61,'wall','bench',{recovery:2,soft:2,lounge:2,contemporary:2}),
+ asset('bookcaseclosedwide',1.76,.64,1.9,'wall','storage',{storage:3,study:2,display:1,tall:3,quiet:2}),
+ asset('bookcasecloseddoors',1.13,.61,1.87,'wall','storage',{storage:3,privacy:2,quiet:2,vertical:3}),
+ asset('cabinetbeddrawer',1.23,.56,.83,'wall','storage',{sleep:2,storage:3,compact:2,privacy:1}),
+ asset('cabinettelevisiondoors',1.46,.59,.80,'wall','mediaStorage',{media:2,storage:3,technology:2,contemporary:2}),
+ asset('tablecoffeeglass',1.35,.82,.48,'center','coffee',{lounge:3,social:2,contemporary:3,premium:2,group:1},{companion:'sofa'}),
+ asset('tablecoffeeglasssquare',1.07,1.07,.49,'center','coffee',{lounge:3,social:2,contemporary:3,premium:2},{companion:'sofa'}),
+ asset('kitchenfridgesmall',.75,.75,1.43,'wall','coldStorage',{cook:3,storage:2,compact:3,hard:2}),
+ asset('kitchenfridgebuiltin',.90,.80,1.89,'wall','coldStorage',{cook:3,storage:3,contemporary:3,tall:3}),
+ asset('kitchenstoveelectric',.90,.83,.93,'wall','cooking',{cook:3,hard:3,technology:2,contemporary:3}),
+ asset('bathroomsinksquare',.84,.63,.88,'wall','sink',{hygiene:3,water:3,contemporary:3,hard:2}),
+ asset('toiletsquare',.79,.95,.87,'wall','toilet',{hygiene:3,privacy:3,water:2,contemporary:2}),
+ asset('stoolbarsquare',.59,.57,.78,'center','diningChair',{dine:3,social:2,compact:3,contemporary:2},{companion:'diningTable'}),
+ asset('kitchenmicrowave',.52,.39,.36,'wall','kitchenTool',{cook:2,technology:2,compact:2,hard:2},{solid:false}),
+ asset('kitchenblender',.33,.33,.54,'wall','kitchenTool',{cook:2,technology:2,social:1,compact:2},{solid:false}),
+ asset('toaster',.33,.28,.27,'wall','kitchenTool',{cook:2,compact:3,warm:1},{solid:false}),
+ asset('rugdoormat',1.20,.73,.025,'center','rug',{ground:3,compact:3,soft:2,accent:1},{solid:false})
 ]);
 export const FURNITURE_BY_ID=Object.freeze(Object.fromEntries(FURNITURE.map(p=>[p.model,p])));
 export function semanticSimilarity(a,b){
