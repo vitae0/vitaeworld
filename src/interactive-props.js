@@ -27,6 +27,7 @@ export function buildInteractivePropVisuals(propHolders,props,owned){
      Math.min(1,p.modelW*.78),Math.min(1.6,p.h*.86),.035),doorMaterial);
    panel.position.x=Math.min(1,p.modelW*.78)*.5;
    pivot.add(panel);holder.add(pivot);
+   pivot.visible=false;
    target={type:'hinge',node:pivot,goal:0};
   }else if(p.role==='screen'){
    const panel=create(new THREE.BoxGeometry(
@@ -57,8 +58,10 @@ export function buildInteractivePropVisuals(propHolders,props,owned){
  return {
   setState(propId,on){
    const item=shapes.get(propId);if(!item)return false;
-   if(item.type==='hinge')item.goal=on?-1.16:0;
-   else item.node.visible=Boolean(on);
+   if(item.type==='hinge'){
+    item.goal=on?-1.16:0;
+    if(on)item.node.visible=true;
+   }else item.node.visible=Boolean(on);
    return true;
   },
   update(dt){
@@ -68,6 +71,8 @@ export function buildInteractivePropVisuals(propHolders,props,owned){
     const delta=item.goal-item.node.rotation.y;
     if(Math.abs(delta)<.0001)continue;
     item.node.rotation.y+=Math.sign(delta)*Math.min(Math.abs(delta),step);
+    if(item.goal===0&&Math.abs(item.node.rotation.y)<.0001)
+     item.node.visible=false;
    }
   },
   get count(){return shapes.size;}
