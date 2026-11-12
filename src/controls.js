@@ -14,6 +14,8 @@ export class Controller {
   this.pitch=-0.17;this.heading=this.yaw;this.mode='third';
   this.keys=new Set();this.touch={x:0,y:0};this.dragging=false;
   this.touchPad=touchPad;this.thumb=thumb;this.elapsed=0;
+  this.touchLookMultiplier=2.2;
+  this.touchMoveMultiplier=1.18;
   this.bind();
   this.updateCamera();
  }
@@ -26,8 +28,8 @@ export class Controller {
   });
   document.addEventListener('keyup',e=>this.keys.delete(e.code));
   window.addEventListener('blur',()=>this.keys.clear());
-  const look=(dx,dy)=>{
-    const sensitivity=0.00265;
+  const look=(dx,dy,multiplier=1)=>{
+    const sensitivity=0.00265*multiplier;
     this.yaw-=dx*sensitivity;
     this.pitch=clamp(this.pitch-dy*sensitivity,-1.15,0.87);
   };
@@ -48,7 +50,7 @@ export class Controller {
   c.addEventListener('pointermove',e=>{
     if(e.pointerType==='touch'&&this.touchPointer===e.pointerId){
       const dx=e.clientX-this.touchStart.x,dy=e.clientY-this.touchStart.y;
-      look(dx,dy);
+      look(dx,dy,this.touchLookMultiplier);
       this.touchStart={x:e.clientX,y:e.clientY};
     }else if(e.pointerType==='mouse'&&this.dragging&&document.pointerLockElement!==c){
       look(e.clientX-this.lastMouse.x,e.clientY-this.lastMouse.y);
@@ -81,8 +83,12 @@ export class Controller {
   const box=this.touchPad.getBoundingClientRect();
   const x=e.clientX-(box.left+box.width/2),y=e.clientY-(box.top+box.height/2);
   const limit=box.width*0.32;
-  this.touch={x:clamp(x/limit,-1,1),y:clamp(y/limit,-1,1)};
+  this.touch={x:clamp(x/limit*this.touchMoveMultiplier,-1,1),
+   y:clamp(y/limit*this.touchMoveMultiplier,-1,1)};
   this.thumb.style.transform=`translate(calc(-50% + ${this.touch.x*limit}px),calc(-50% + ${this.touch.y*limit}px))`;
+ }
+ setTouchSensitivity(multiplier){
+  this.touchLookMultiplier=clamp(Number(multiplier)||2.2,1,4);
  }
  capture(){
   if(this.canvas.requestPointerLock)this.canvas.requestPointerLock();

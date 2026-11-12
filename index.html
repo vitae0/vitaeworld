@@ -16,12 +16,17 @@
     <div class="emblem"><span>V</span></div>
     <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 07</small></div>
    </div>
+   <nav class="topControls" aria-label="Arayüz panelleri">
+    <button id="toggleSettings" class="panelToggle" type="button" aria-controls="settingsPanel" aria-expanded="true">☷ <span>AYARLAR</span></button>
+    <button id="toggleMap" class="panelToggle" type="button" aria-controls="mapPanel" aria-expanded="true">▦ <span>HARİTA</span></button>
+   </nav>
    <div class="topStatus">
     <span class="statusDot"></span> <span>EXPERIMENTAL BUILD</span>
     <span class="statusDivider"></span><span id="fps">-- FPS</span>
    </div>
   </header>
-  <aside class="leftPane glass">
+  <aside id="settingsPanel" class="leftPane glass" aria-label="İç mekân ayarları">
+    <div class="paneHeader"><span>WORLD SETTINGS</span><button id="closeSettings" class="paneClose" type="button" aria-label="Ayarlar panelini kapat">×</button></div>
     <div class="eyebrow">INTERIOR GENERATOR <span>COMPOSITION / DRESSING</span></div>
     <h1>Spaces with<br><em>some personality.</em></h1>
     <p class="intro">Daha kompakt odalar, uyumlu mobilya grupları, duvar sanatı, raflar, sıcak ışıklar ve çakışmasız dekorasyon.</p>
@@ -51,12 +56,16 @@
       <button id="character" class="lineButton">CHANGE AVATAR</button>
     </div>
     <button id="palette" class="lineButton full">◈ &nbsp; CHANGE MATERIAL PALETTE</button>
+    <div class="touchSensitivitySetting">
+     <label class="formLabel" for="touchSensitivity">TOUCH CAMERA SENSITIVITY <output id="touchSensitivityValue" for="touchSensitivity">2.2×</output></label>
+     <input type="range" id="touchSensitivity" min="1" max="4" step="0.1" value="2.2" aria-label="Dokunmatik kamera hassasiyeti">
+    </div>
     <div class="assetStatus"><span id="assetStatus">LOADING MODELS</span><span id="avatarState">AVATAR LOADING</span></div>
     <div class="progress"><div id="assetFill"></div></div>
     <div class="credit">CC0 ASSETS · KENNEY / QUATERNIUS / KAYKIT</div>
   </aside>
-  <aside class="rightPane glass">
-    <div class="paneTop"><span>FLOOR PLAN</span><span class="miniBadge">LIVE</span></div>
+  <aside id="mapPanel" class="rightPane glass" aria-label="Kat planı">
+    <div class="paneTop"><span>FLOOR PLAN</span><div class="paneActions"><span class="miniBadge">LIVE</span><button id="closeMap" class="paneClose" type="button" aria-label="Harita panelini kapat">×</button></div></div>
     <canvas id="minimap" width="240" height="195" aria-label="Bina kat planı"></canvas>
     <div class="currentCaption">CURRENT SPACE</div>
     <strong id="currentRoom">SERPENTINE HALL</strong><div id="roomTraits" class="roomTraits">MULTIPLE CORRIDOR LOOPS · 40D + 16D</div>

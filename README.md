@@ -1,4 +1,4 @@
-# VitaeWorld | Architecture Lab 07
+# VitaeWorld | Architecture Lab 08
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
@@ -25,6 +25,24 @@ The floor plan uses a 25×19 occupancy grid of 1.3m cells. Room splitting valida
 61 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
+
+## Lab 08 — Collapsible UI and mobile touch feel
+
+- Two persistent top-bar buttons independently open/close the generation
+  settings and floor-plan panels on desktop. On screens 800px or narrower,
+  both panels start closed and opening one closes the other so the 3D
+  viewport stays available. The panels have keyboard-accessible close
+  controls, return focus after closing, and respond to Escape.
+- Mobile overlays respect the viewport height and stay above the virtual
+  joystick rather than covering it. This is a pure UI change and does
+  not change the procedural building data.
+- Drag-to-look sensitivity on touch starts at **2.2×** the desktop
+  pointer sensitivity, adjustable from **1.0× to 4.0×** in the settings
+  panel. The virtual movement joystick reaches full input about 18%
+  sooner. Mouse and keyboard controls retain their earlier feel.
+- `src/ui-panels.js` contains framework-independent state handling.
+  `tests/ui-panels.test.mjs` covers mobile exclusivity, desktop
+  independence, aria-expanded and keyboard dismissal.
 
 ## Lab 07 — First-class corridors and connected storeys
 
