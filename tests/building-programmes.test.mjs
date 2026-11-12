@@ -80,9 +80,14 @@ test('the external entrance is deliberately NOT actionable',()=>{
  assert.equal(b.programId,'hotel');
  for(const story of b.stories){
   const exterior=story.layout.exteriorDoor;
-  assert.ok(exterior.locked);
-  assert.ok(!i.items.some(item=>item.level===story.index&&item.kind==='door'&&
-   item.x===exterior.x&&item.z===exterior.z&&item.exterior));
+  if(story.index===0){
+   assert.ok(exterior.locked);
+   assert.ok(!i.items.some(item=>item.level===story.index&&item.kind==='door'&&
+    item.x===exterior.x&&item.z===exterior.z&&item.exterior));
+  }else{
+   assert.equal(exterior,null,
+     'upper storeys must not have doors opening into midair');
+  }
  }
  assert.equal(i.items.filter(o=>o.kind==='door').length,
     b.stories.reduce((s,l)=>s+l.layout.doors.length,0));
