@@ -93,3 +93,58 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
  font-size:10px;letter-spacing:1.1px;font-weight:700;outline:none;cursor:pointer}
 #buildingStyle:focus{border-color:#a6f9d9}
 #buildingStyle option{background:#102734;color:#e8fff5}
+
+/* LAB 08: The 3D canvas stays usable when either floating panel is hidden. */
+.topbar{z-index:30;gap:12px}
+.topControls{display:flex;gap:7px;margin-left:auto;pointer-events:auto}
+.panelToggle,.paneClose{font-family:'DM Sans',system-ui,sans-serif;background:rgba(11,35,46,.83);
+ color:#defbef;border:1px solid rgba(165,232,215,.42);border-radius:8px}
+.panelToggle{min-height:40px;padding:0 13px;font-size:11px;font-weight:700;letter-spacing:.7px;white-space:nowrap}
+.panelToggle[aria-expanded="true"]{background:rgba(80,137,126,.36);border-color:#b5f5d7}
+.panelToggle:hover,.paneClose:hover{background:rgba(80,137,126,.5)}
+.panelToggle:focus-visible,.paneClose:focus-visible{outline:2px solid #b5f5d7;outline-offset:2px}
+.paneClose{min-width:32px;height:32px;font-size:21px;line-height:1;display:grid;place-items:center}
+.leftPane,.rightPane{pointer-events:auto;z-index:20;overscroll-behavior:contain}
+.leftPane[hidden],.rightPane[hidden]{display:none!important}
+.paneHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-8px -6px 17px 0;
+ color:#a6decf;letter-spacing:1.4px;font-size:10px;font-weight:700}
+.paneActions{display:flex;align-items:center;gap:8px}
+.touchSensitivitySetting{margin-top:18px;border-top:1px solid rgba(183,223,225,.14);padding-top:14px}
+.touchSensitivitySetting .formLabel{display:flex;justify-content:space-between;align-items:center;gap:6px}
+#touchSensitivityValue{color:#b5f5d7;font-size:11px;font-weight:700;white-space:nowrap}
+#touchSensitivity{appearance:auto;width:100%;height:24px;padding:0;margin:0;
+ background:transparent;accent-color:#b5f5d7;border:0;cursor:pointer;touch-action:pan-x}
+@media(max-width:1120px){
+ .topControls{gap:5px}
+ .panelToggle{padding:0 9px;font-size:10px}
+}
+@media(max-width:800px){
+ .topbar{padding:12px max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left));gap:6px;align-items:center}
+ .topStatus{display:none}
+ .panelToggle{min-height:44px;min-width:48px;padding:0 10px;letter-spacing:0}
+ .leftPane,.rightPane{top:72px;bottom:auto;max-height:calc(100dvh - 210px);overflow-y:auto;scrollbar-width:thin}
+ .leftPane{left:12px;width:min(85vw,310px);padding:16px}
+ .rightPane{right:12px;width:min(82vw,285px);padding:15px}
+ .paneHeader{margin:0 0 12px}
+ .touchSensitivitySetting{display:block}
+ .touchUI{z-index:25}
+ #touchPad{bottom:max(18px,env(safe-area-inset-bottom))}
+ #mobileView{bottom:max(38px,env(safe-area-inset-bottom))}
+}
+@media(max-width:490px){
+ .topbar{padding-top:max(9px,env(safe-area-inset-top))}
+ .brand{gap:7px}.emblem{width:31px;height:31px}.brand strong{font-size:13px;letter-spacing:1.1px}
+ .brand small{font-size:6px;letter-spacing:.65px}
+ .topControls{gap:4px}
+ .panelToggle{padding:0 8px;min-width:42px;font-size:9px}
+ .panelToggle span{font-size:9px}
+ .leftPane{width:min(92vw,315px);top:calc(58px + env(safe-area-inset-top));left:8px;bottom:auto;padding:14px}
+ .rightPane{width:min(90vw,280px);top:calc(58px + env(safe-area-inset-top));right:8px}
+ .leftPane .intro{display:block}
+ .leftPane h1{font-size:19px}
+ .actionRow{flex-direction:row}
+ .credit{display:block}
+}
+@media(max-height:550px) and (max-width:800px){
+ .leftPane,.rightPane{max-height:calc(100dvh - 120px);top:58px}
+}
