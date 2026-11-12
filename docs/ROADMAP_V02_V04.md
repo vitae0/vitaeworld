@@ -80,3 +80,15 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
 - Yeni CC0 duvar, taş, laminat ve terakota doku aileleri.
 - Gelecek işler: pencereler, cephe detayları, eğitimli plan
   varyantlarının kör estetik karşılaştırması, model bazlı animasyon/IK.
+
+## Lab 14 (12 Kasım 2026): pencereler ve doğal ışık
+
+- **Uygulandı:** Dış duvarlarda gerçek geometrik pencere açıklıkları;
+  cam, çerçeve, denizlik ve oda türüne göre iç perde varyasyonları.
+- **Uygulandı:** Tuvalet/banyo mahremiyetini koruyan pencere kuralları,
+  kapı açıklıklarından ayrı üretim, dış cephe geçiş engelleri.
+- **Uygulandı:** Giriş cephesinde küçük saçak ve bina türüne göre görünüm.
+- **Uygulandı:** 24 saatlik elle/otomatik gün-gece döngüsü; güneş,
+  gökyüzü, sis ve ortam ışığı birbirine bağlı.
+- **Açık:** Gerçek zamanlı ışık-gölge projeksiyonları, hacimsel gün ışığı,
+  tüm cephe için mimari kör değerlendirme ve gerçek telefon FPS testi.
