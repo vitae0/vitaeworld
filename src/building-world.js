@@ -33,6 +33,9 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
   setInteractionState(item,on){
    return levels[item.level]?.setInteractionState(item,on)??false;
   },
+  tick(dt){
+   for(const layer of levels)if(layer.root.visible)layer.tick(dt);
+  },
   setFirstPerson(value){firstPerson=Boolean(value);update();},
   dispose(){
    if(disposed)return;disposed=true;
