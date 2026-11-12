@@ -72,10 +72,15 @@ function shuffled(values,rng){
 }
 export function generateDecorations(layout,seed=layout.seed){
  const decorations=[], furniture=layout.props||[];
+ const buildingRng=seededRandom(String(seed)+'::shared-interior-language');
+ const commonMood=Math.floor(buildingRng()*MOODS.length);
+ layout.decorLanguage=MOODS[commonMood].name;
  for(const room of layout.rooms){
   const rng=seededRandom(String(seed)+'::dressing::'+room.id);
-  // Stable room-level mood keeps palette, picture and small props coherent.
-  const mood=MOODS[Math.floor(rng()*MOODS.length)];
+  // Most rooms inherit the same design language; a few get subtle variations.
+  // Uniformly random colour themes per room look like a showroom catalogue.
+  const shift=rng()<.78?0:(rng()<.6?1:-1);
+  const mood=MOODS[(commonMood+shift+MOODS.length)%MOODS.length];
   room.decorMood=mood.name;
   const walls=shuffled(wallFaces(layout,room),rng);
   const target=Math.min(5,Math.max(2,Math.round(room.area/11)));
