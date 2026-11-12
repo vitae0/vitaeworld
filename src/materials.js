@@ -65,6 +65,8 @@ export function createSurfaceMaterial(kind,owned,{tint=0xffffff,
   roughness,metalness});
  owned.add(mat);owned.add(defaultMap);
  let disposed=false;
+ const originalDispose=mat.dispose.bind(mat);
+ mat.dispose=()=>{disposed=true;originalDispose();};
  manifest().then(async data=>{
   if(!data||disposed)return;
   const records=(data.assets||[]).filter(r=>r.asset===ASSET[kind]);
@@ -82,8 +84,4 @@ export function createSurfaceMaterial(kind,owned,{tint=0xffffff,
   }
  });
  return mat;
-}
-export function markSurfaceDisposed(){
- // A shared material belongs to exactly one world; world.dispose() cleans
- // its material textures and prevents displaying stale old levels.
 }
