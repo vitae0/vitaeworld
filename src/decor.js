@@ -1,5 +1,5 @@
 // VitaeWorld dressing layer. Pure deterministic data, independent of Three.js.
-// Wall items sit above head level; tabletop pieces are checked in actual 3D
+// Wall anchors are checked against real furniture; tabletops use 3D volume tests
 // against every furnished object and one another before being accepted.
 import {TILE,GRID_W,GRID_H,worldCell,seededRandom} from './topology.js';
 import {volumeOverlap} from './interior-quality.js';
@@ -91,11 +91,21 @@ export function generateDecorations(layout,seed=layout.seed){
    const kind=R(rng,kindsFor(room.type));
    const d={id:'d-'+room.id+'-'+decorations.length,roomId:room.id,
     source:'wall',kind,x:wall.x,z:wall.z,angle:wall.angle,
-    y:kind==='art'?2.47:kind==='shelf'?2.32:2.42,
+    y:kind==='art'?1.91:kind==='shelf'?2.32:2.28,
     w:kind==='art'?.78:kind==='shelf'?.80:.25,
     h:kind==='art'?.65:kind==='shelf'?.42:.28,
     d:.11,mood:mood.name,color:mood.ink,paper:mood.paper,
     accent:mood.accent,leaf:mood.leaf,variant:Math.floor(rng()*5)};
+   // Eye-level pictures read as a lived-in room. If a tall bookshelf is
+   // directly underneath, mount above it or use a different wall segment.
+   const occupied=()=>{
+    const sa=Math.abs(Math.sin(d.angle)),ca=Math.abs(Math.cos(d.angle));
+    const projected={...d,w:d.w*ca+d.d*sa,d:d.w*sa+d.d*ca,
+     y:d.y-d.h/2};
+    return furniture.some(p=>p.roomId===room.id&&volumeOverlap(projected,p,.06));
+   };
+   if(occupied()&&kind==='art')d.y=2.43;
+   if(occupied())continue;
    decorations.push(d);accepted.push(d);
   }
   // Small lived-in details on real support surfaces. The rendering geometry
