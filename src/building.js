@@ -9,6 +9,7 @@ import {resolveBuildingProgram} from './building-programs.js';
 import {resolveInteriorStyle} from './style-families.js';
 import {generateWallFeatures,wallFeatureReport} from './wall-features.js';
 import {roomGenerationReport} from './room-archetypes.js';
+import {makeInteriorFitout} from './interior-fitout.js';
 
 export function generateBuilding(seed='vitae-001',type='auto',count=2,programId='auto',styleId='auto'){
  const floors=Math.max(1,Math.min(2,Math.floor(count)||2));
@@ -35,8 +36,11 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2,programId=
     (story.index===0?String(seed):String(seed)+'::upper')+'::all-spaces');
   layout.qualityReport.decorations=layout.decorations.length;
   layout.wallFeatures=generateWallFeatures(layout);
+  // Recalculate ceiling details after stair cutouts and corridor promotion.
+  layout.fitout=makeInteriorFitout(layout,layout.seed);
   layout.styleReport={...roomGenerationReport(layout),
-   wallTreatments:wallFeatureReport(layout)};
+   wallTreatments:wallFeatureReport(layout),
+   fitout:layout.fitout.report};
  }
  const rooms=stories.flatMap(s=>s.layout.rooms.map(r=>({
   ...r,storey:s.index,globalId:s.index+':'+r.id
