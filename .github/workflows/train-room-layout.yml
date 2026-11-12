@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: vitae-room-layout-training
+  group: vitae-room-layout-training-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
