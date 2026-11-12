@@ -161,6 +161,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  return {
   root,ceiling,colors:palette,paletteName:palette.name,
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
+  tick(dt){doors.update(dt);propStates.update(dt);},
   setInteractionState(item,on){
    if(item.kind==='door')return doors.setOpen(item.door.roomId,on);
    return propStates.setState(item.prop?.id,on);
