@@ -104,3 +104,15 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
   gereksiz draw call yükü eklenmiyor.
 - Eğitilmiş model parametreleri karşılaştırmalı araştırma için depoda
   tutuluyor; kullanıcı onayı olmadan tekrar etkinleşmeyecek.
+
+## Lab 16 — Mobilya erişimi ve yapısal kat örtüşmesi
+
+- Eski klasik yerleşim sıralaması **aynen korunuyor**. Yalnızca
+  son 4–7 aday arasında koltuk, sandalye, yatak, lavabo ve dolapların
+  erişilebilir yüzleri küçük bir bağlayıcı puan olarak değerlendiriliyor.
+- Daha geniş veri kümeleri veya eğitimli modele otomatik geri dönüş yok.
+- Alt kat tavanı, üst katın gerçekten bulunan zemin döşemesinin altına
+  gereksiz bir ikinci katman çizmek yerine yalnızca kapatılmamış alanlarda
+  oluşturuluyor. Merdiven boşluğunun döşeme kenarlarında ince çerçeve var.
+- Sonraki kontrol: Gerçek mobil tarayıcıda tavan/merdiven görüntüsü
+  ve farklı bina planlarında mobilyaların elle görsel incelenmesi.
