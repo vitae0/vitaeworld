@@ -275,6 +275,7 @@ function loop(){
  const dt=clock.getDelta();
  if(document.hidden)return;
  controller.update(dt);
+ world?.tick(dt);
  world?.setPlayerHeight(controller.position.y);
  if(++interactionFrames%3===0)updateActionTarget();
  if(controller.level!==shownLevel){
