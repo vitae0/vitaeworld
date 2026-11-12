@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import {isWalkable} from './layout.js';
+import {sampleWalkableGround} from './stairs.js';
 import {animateCharacter} from './assets.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(n,b));
 export class Controller {
  constructor(canvas,camera,layout,avatar,touchPad,thumb){
-  this.canvas=canvas;this.camera=camera;this.layout=layout;this.avatar=avatar;
-  this.position=new THREE.Vector3(layout.spawn.x,0,layout.spawn.z);
+  this.canvas=canvas;this.camera=camera;this.building=layout.stories?layout:null;
+  this.level=0;this.layout=this.building?layout.stories[0].layout:layout;
+  this.avatar=avatar;
+  this.position=new THREE.Vector3(layout.spawn.x,layout.spawn.y??0,layout.spawn.z);
   this.yaw=0;this.pitch=-0.17;this.heading=0;this.mode='third';
   this.keys=new Set();this.touch={x:0,y:0};this.dragging=false;
   this.touchPad=touchPad;this.thumb=thumb;this.elapsed=0;
@@ -94,8 +97,10 @@ export class Controller {
   this.updateCamera();
  }
  setLayout(layout){
-  this.layout=layout;
-  this.position.set(layout.spawn.x,0,layout.spawn.z);
+  this.building=layout.stories?layout:null;
+  this.level=0;
+  this.layout=this.building?layout.stories[0].layout:layout;
+  this.position.set(layout.spawn.x,layout.spawn.y??0,layout.spawn.z);
   this.heading=0;
   this.updateCamera();
  }
@@ -115,12 +120,22 @@ export class Controller {
     const speed=(k.has('ShiftLeft')||k.has('ShiftRight')?5.25:3.2);
     // Separate axes slide along walls; the character cannot walk through a wall or a sofa.
     const x=this.position.x+dx*speed*dt, z=this.position.z+dz*speed*dt;
-    if(isWalkable(this.layout,x,this.position.z,0.31))this.position.x=x;
-    if(isWalkable(this.layout,this.position.x,z,0.31))this.position.z=z;
+    const probe=(x,z)=>{
+     if(!this.building){
+      return isWalkable(this.layout,x,z,.31)?
+        {height:this.position.y,level:this.level}:null;
+     }
+     return sampleWalkableGround(this.building,x,z,this.position.y,.31);
+    };
+    const alongX=probe(x,this.position.z);
+    if(alongX){this.position.x=x;this.position.y=alongX.height;this.level=alongX.level;}
+    const alongZ=probe(this.position.x,z);
+    if(alongZ){this.position.z=z;this.position.y=alongZ.height;this.level=alongZ.level;}
+    if(this.building)this.layout=this.building.stories[this.level].layout;
     this.heading=Math.atan2(-dx,-dz);
   }
   if(this.avatar){
-    this.avatar.group.position.set(this.position.x,0.11,this.position.z);
+    this.avatar.group.position.set(this.position.x,this.position.y+.11,this.position.z);
     this.avatar.group.rotation.y=this.heading;
     this.avatar.group.visible=this.mode==='third';
     animateCharacter(this.avatar,dt,this.elapsed,moving);
@@ -129,7 +144,7 @@ export class Controller {
   return moving;
  }
  updateCamera(){
-  const eye=new THREE.Vector3(this.position.x,1.65,this.position.z);
+  const eye=new THREE.Vector3(this.position.x,this.position.y+1.65,this.position.z);
   const dir=new THREE.Vector3(-Math.sin(this.yaw)*Math.cos(this.pitch),
                             Math.sin(this.pitch),
                             -Math.cos(this.yaw)*Math.cos(this.pitch));
@@ -145,7 +160,7 @@ export class Controller {
     for(let i=1;i<=24;i++){
       const t=i/24;
       const probe=target.clone().lerp(desired,t);
-      if(probe.y<3.2&&!isWalkable(this.layout,probe.x,probe.z,0.17)){
+      if(probe.y<this.position.y+3.2&&!isWalkable(this.layout,probe.x,probe.z,0.17)){
         fraction=Math.max(0.12,(i-1)/24);
         break;
       }
