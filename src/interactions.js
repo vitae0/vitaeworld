@@ -168,8 +168,21 @@ export function createInteractionSystem(building){
   }
   return {ok:false,reason:'unsupported'};
  }
+ function importStates(snapshot){
+  if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot))
+   return [];
+  const changes=[];
+  for(const [id,on] of Object.entries(snapshot)){
+   const item=byId.get(id);
+   if(!item||!TOGGLE.has(item.kind)||typeof on!=='boolean')continue;
+   states.set(id,{on});
+   changes.push({item,on});
+  }
+  return changes;
+ }
  return {items:all,byId,byLevel,select,perform,actionName,
   state,doorClosedAt,candidateNear,get activePose(){return activePose;},
   exportStates:()=>Object.fromEntries([...states].map(([id,s])=>[id,s.on])),
+  importStates,
   clearPose(){const old=activePose;activePose=null;return old;}};
 }
