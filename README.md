@@ -1,8 +1,37 @@
-# VitaeWorld | Architecture Lab 15
+# VitaeWorld | Architecture Lab 16
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 16 — Usable furniture and correctly visible inter-storey slabs
+
+**Keep classic layouts.** We preserve the pre-training 40D semantic +
+16D location candidate ordering exactly. Only the final 4–7 spatially
+distinct candidates of each furniture object receive an optional,
+bounded **functional standing-room tie-break**. Chairs facing dining
+tables are approached from behind; beds and baths are approached from
+either side; cabinets, sofas, sinks and stoves need clear access in front.
+No neural placement prior, re-training, hard movement blocker or
+unverified GLB orientation assumption enters this change. Navigation,
+door access, collision tests and 5:3 room ratios remain authoritative.
+Computing access for only the shortlist avoids an expensive pass over
+hundreds of candidates per room.
+
+**Floor/ceiling visual fix.** The independently rendered upstairs
+floor could previously be concealed by a second, opaque ceiling
+belonging to the downstairs scene. Now each storey's ceiling uses
+`visibleCeilingCells`: only tiles **not covered by the actual next
+floor's renderable deck** retain the local ceiling. The slab itself
+continues rendering from below, including its proper stair holes.
+Small instanced trim pieces frame the edges of the upstairs stairwell
+opening. This avoids both double slabs and visual sky holes in
+nonoverlapping lower-floor areas without rendering upstairs furniture.
+
+`tests/furniture-floor-deck.test.mjs` verifies the reduced ceiling
+coverage, staircase-rim geometry and functional-frontage cases across
+all eight building grammars. Real-device FPS and visual QA remain
+separate acceptance checks.
 
 ## Lab 15 — Restore classic semantic furnishing; keep upstairs floor visible
 
@@ -13,7 +42,7 @@ placement. The original deterministic, interpretable 40D semantics +
 long-room end walls and doorway accessibility remain the authoritative
 scorer. We retain the previously trained JSON/holdout data **for
 offline comparison only**; it does not affect generated scenes.
-`layout.placementMethod === "semantic-rules-v2"` makes this explicit.
+`layout.placementMethod === "semantic-rules-v2-access"` identifies the updated, still rule-based implementation.
 
 As a narrow improvement that does not disturb the old room-composition
 scorer, `src/placement-constraints.js` rejects tall storage, screens
