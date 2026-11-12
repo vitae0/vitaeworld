@@ -10,7 +10,8 @@ export class Controller {
   this.level=0;this.layout=this.building?layout.stories[0].layout:layout;
   this.avatar=avatar;
   this.position=new THREE.Vector3(layout.spawn.x,layout.spawn.y??0,layout.spawn.z);
-  this.yaw=0;this.pitch=-0.17;this.heading=0;this.mode='third';
+  this.yaw=this.building?.stairs?.[0]?Math.atan2(-this.building.stairs[0].dx,-this.building.stairs[0].dz):0;
+  this.pitch=-0.17;this.heading=this.yaw;this.mode='third';
   this.keys=new Set();this.touch={x:0,y:0};this.dragging=false;
   this.touchPad=touchPad;this.thumb=thumb;this.elapsed=0;
   this.bind();
@@ -101,7 +102,9 @@ export class Controller {
   this.level=0;
   this.layout=this.building?layout.stories[0].layout:layout;
   this.position.set(layout.spawn.x,layout.spawn.y??0,layout.spawn.z);
-  this.heading=0;
+  this.yaw=this.building?.stairs?.[0]?
+   Math.atan2(-this.building.stairs[0].dx,-this.building.stairs[0].dz):0;
+  this.heading=this.yaw;
   this.updateCamera();
  }
  update(dt){
