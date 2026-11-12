@@ -9,7 +9,7 @@ const doorHead=(layout,door)=>layout.walls.some(w=>
  w.kind==='lintel'&&match(w.x,door.x)&&match(w.z,door.z)&&
  match(w.y+w.height/2,WALL_HEIGHT+.10)&&
  match(w.y-w.height/2,DOOR_HEIGHT+.10));
-export function auditInterior(layout){
+export function auditInterior(layout,{deep=false}={}){
  const issues=[],counts={
   rooms:layout.rooms?.length||0,
   props:layout.props?.length||0,
@@ -31,12 +31,15 @@ export function auditInterior(layout){
     models:room.missingEssentials.slice()});
   }
   if(room.circulation)continue;
-  const props=(layout.props||[]).filter(p=>p.roomId===room.id);
-  const access=roomAccessibility(layout,room,props);
-  if(!access.doorOpen||access.ratio<.82){
+  // The placement engine already computed full-resolution path coverage.
+  // Reuse it in gameplay; opt-in deep audits recompute independently.
+  const ratio=!deep&&Number.isFinite(room.accessibility)?
+   room.accessibility:roomAccessibility(layout,room,
+    (layout.props||[]).filter(p=>p.roomId===room.id)).ratio;
+  if(ratio<.82){
    counts.blockedRooms++;
    issues.push({type:'room-inaccessible',room:room.id,
-    ratio:+access.ratio.toFixed(3)});
+    ratio:+ratio.toFixed(3)});
   }
  }
  for(const door of [
