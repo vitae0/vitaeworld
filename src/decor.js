@@ -74,8 +74,10 @@ function shuffled(values,rng){
 export function generateDecorations(layout,seed=layout.seed){
  const decorations=[], furniture=layout.props||[];
  const buildingRng=seededRandom(String(seed)+'::shared-interior-language');
+ const style=layout.interiorStyle||null;
+ const density=style?.decor??1;
  const commonMood=Math.floor(buildingRng()*MOODS.length);
- layout.decorLanguage=MOODS[commonMood].name;
+ layout.decorLanguage=style?.id||MOODS[commonMood].name;
  for(const room of layout.rooms){
   const rng=seededRandom(String(seed)+'::dressing::'+room.id);
   // Most rooms inherit the same design language; a few get subtle variations.
@@ -84,7 +86,10 @@ export function generateDecorations(layout,seed=layout.seed){
   const mood=MOODS[(commonMood+shift+MOODS.length)%MOODS.length];
   room.decorMood=mood.name;
   const walls=shuffled(wallFaces(layout,room),rng);
-  const target=Math.min(5,Math.max(2,Math.round(room.area/11)));
+  // Minimal rooms get intentional breathing space; rich/rustic rooms
+  // receive more wall dressing without adding physical blockers.
+  const target=Math.max(0,Math.min(7,Math.round(
+   Math.min(5,Math.max(2,room.area/11))*density)));
   const accepted=[];
   for(const wall of walls){
    if(accepted.length>=target)break;
@@ -115,7 +120,8 @@ export function generateDecorations(layout,seed=layout.seed){
   for(const parent of roomProps){
    if(!parent.solid||!TABLE_SURFACES.has(parent.role)||parent.h>1.35)continue;
    const recipes=shuffled(tabletopKinds(parent.role,room.type),rng);
-   const maximum=parent.role==='diningTable'?3:parent.w>1.15?2:1;
+   const maximum=Math.max(0,Math.round(
+    (parent.role==='diningTable'?3:parent.w>1.15?2:1)*density));
    let count=0;
    const positions=shuffled([[0,0],[-.42,0],[.42,0],[0,-.45],[0,.45],
      [-.42,-.36],[.42,.36],[-.42,.36],[.42,-.36]],rng);
@@ -172,6 +178,8 @@ export function generateDecorations(layout,seed=layout.seed){
    const chosen=safeCeiling.reduce((a,c)=>!a||
     Math.hypot(c.x-room.x,c.z-room.z)<Math.hypot(a.x-room.x,a.z-room.z)?c:a,null);
    const kind=room.circulation?'flush':
+    style?.id==='sleek'||style?.id==='minimal'?'flush':
+    style?.id==='rusty'||style?.id==='industrial'?'track':
     ['dining','lobby','suite'].includes(room.type)?'chandelier':
     ['studio','gallery','office'].includes(room.type)?'track':
     ['kitchen','lounge','games'].includes(room.type)?'pendant':'flush';
@@ -184,7 +192,7 @@ export function generateDecorations(layout,seed=layout.seed){
   }
   // Rugs are cluster anchors, not extra obstacles. Corners of each carpet
   // must remain on the actual room footprint, clear of door and stair cells.
-  if(['suite','lounge','library','dining','games','studio','wellness','office'].includes(room.type)){
+  if(density>.48&&['suite','lounge','library','dining','games','studio','wellness','office'].includes(room.type)){
    const rugs=shuffled(room.cells,rng).sort((a,b)=>
      Math.hypot(a.x-room.x,a.z-room.z)-Math.hypot(b.x-room.x,b.z-room.z));
    for(const c of rugs){
