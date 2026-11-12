@@ -4,16 +4,19 @@ import {generateLayout} from './layout.js';
 import {promoteCorridors} from './circulation.js';
 import {chooseStaircase,STOREY_HEIGHT} from './stairs.js';
 import {generateDecorations} from './decor.js';
+import {resolveBuildingProgram} from './building-programs.js';
 
-export function generateBuilding(seed='vitae-001',type='auto',count=2){
+export function generateBuilding(seed='vitae-001',type='auto',count=2,programId='auto'){
  const floors=Math.max(1,Math.min(2,Math.floor(count)||2));
- const ground=generateLayout(String(seed),type);
+ const program=resolveBuildingProgram(programId);
+ const style=type==='auto'&&program?program.architecture:type;
+ const ground=generateLayout(String(seed),style,program);
  // Auto architecture must be decided once for the entire building. Different
  // storeys can have different room divisions, but the corridor spines align.
  const chosenStyle=ground.buildingType;
  const stories=Array.from({length:floors},(_,index)=>({
   index,elevation:index*STOREY_HEIGHT,
-  layout:index===0?ground:generateLayout(String(seed)+'::upper',chosenStyle)
+  layout:index===0?ground:generateLayout(String(seed)+'::upper',chosenStyle,program)
  }));
  const stairs=chooseStaircase(stories);
  const stairCells=stairs.flatMap(s=>s.cells);
@@ -34,7 +37,9 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2){
   x:stairs[0].start.x-stairs[0].dx*stories[0].layout.tile,
   z:stairs[0].start.z-stairs[0].dz*stories[0].layout.tile
  }:stories[0].layout.spawn;
- return {seed:String(seed),buildingType:stories[0].layout.buildingType,
+ return {seed:String(seed),programId:program?.id||'auto',
+  programLabel:program?.label||'Karma kullanım',
+  buildingType:stories[0].layout.buildingType,
   buildingName:stories[0].layout.buildingName,
   stories,stairs,rooms,levelHeight:STOREY_HEIGHT,
   spawn:{...start,y:0},geometryVersion:6};
