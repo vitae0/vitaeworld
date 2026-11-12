@@ -60,6 +60,33 @@ export function addWindowVisuals(root,layout,owned){
    }
   }
  }
+ // Street-side canopy and a small entrance fascia help distinguish
+ // public storefronts from domestic facades. They never block the door.
+ if(layout.exteriorDoor){
+  const entry=layout.exteriorDoor;
+  const commercial=['ticaret','konaklama'].includes(kind);
+  const angle=entry.axis==='x'?0:Math.PI/2;
+  const signWidth=commercial?1.74:1.34;
+  const canopyMat=new THREE.MeshStandardMaterial({
+   color:commercial?0x43616d:0x9c8771,metalness:commercial?.3:.1,roughness:.66
+  });
+  owned.add(canopyMat);
+  const awningGeo=new THREE.BoxGeometry(signWidth,.11,.60);
+  const fasciaGeo=new THREE.BoxGeometry(signWidth,.23,.085);
+  owned.add(awningGeo);owned.add(fasciaGeo);
+  const awning=new THREE.Mesh(awningGeo,canopyMat);
+  awning.name='FacadeEntryCanopy';
+  awning.position.set(entry.x+entry.dx*.32,2.88,
+    entry.z+entry.dz*.32);
+  awning.rotation.y=angle;
+  root.add(awning);
+  const fascia=new THREE.Mesh(fasciaGeo,canopyMat);
+  fascia.name='FacadeEntryFascia';
+  fascia.position.set(entry.x+entry.dx*.09,3.02,
+    entry.z+entry.dz*.09);
+  fascia.rotation.y=angle;
+  root.add(fascia);
+ }
  const geo=new THREE.BoxGeometry(1,1,1);owned.add(geo);
  const node=new THREE.Object3D();
  for(const [role,list] of Object.entries(boxes)){
