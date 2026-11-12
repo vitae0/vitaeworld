@@ -3,6 +3,8 @@ name: Train Room-Layout Spatial Model
 on:
   push:
     branches: [feature/learned-room-layout-v11]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -46,6 +48,7 @@ jobs:
           print('TEST ROOMS:',m['rooms']['rooms_test'])
           PY
       - name: Commit learned weights and evaluation to feature branch
+        if: github.event_name == 'push'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
