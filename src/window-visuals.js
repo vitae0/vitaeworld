@@ -34,6 +34,9 @@ export function addWindowVisuals(root,layout,owned){
  };
  for(const w of windows){
   const width=w.width,height=w.height;
+  // Local +Z maps to world +Z for X walls and world +X for Z walls.
+  // This puts curtains on the *inside* and exterior ledges outside.
+  const outward=w.axis==='x'?w.dz:w.dx;
   const bar=.052,thick=.095;
   const dx=width/2-bar/2,dy=height/2-bar/2;
   local(w,0,dy,0,width,bar,thick,'frame');
@@ -44,8 +47,8 @@ export function addWindowVisuals(root,layout,owned){
   // Glass is a real transparent pane inside the carved masonry aperture.
   local(w,0,0,0,width-.12,height-.12,.013,'glass');
   // Shallow exterior sill and two trim details identify the façade.
-  local(w,0,-height/2-.037,.08,width+.13,.078,.19,'sill');
-  local(w,0,height/2+.10,.02,width+.12,.052,.14,'sill');
+  local(w,0,-height/2-.037,outward*.08,width+.13,.078,.19,'sill');
+  local(w,0,height/2+.10,outward*.02,width+.12,.052,.14,'sill');
   // Privacy is handled in the topology generator: baths/utility spaces
   // never get transparent exterior glass. Curtains face into other rooms.
   if(kind!=='endüstri'&&kind!=='ticaret'&&w.type!=='corridor'){
@@ -53,7 +56,7 @@ export function addWindowVisuals(root,layout,owned){
    const half=width*.22;
    // Slightly folded curtains leave central glass visible from the room.
    if(key%4!==0)for(const side of [-1,1]){
-    local(w,side*width*.325,-.035,-.094,half,height*.91,.023,'fabric');
+    local(w,side*width*.325,-.035,-outward*.094,half,height*.91,.023,'fabric');
    }
   }
  }
