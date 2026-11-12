@@ -3,3 +3,6 @@ dist/
 .DS_Store
 .env
 .vite/
+
+# Bundled CC0 GLBs are created during CI, not committed to Git.
+public/models/

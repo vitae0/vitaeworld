@@ -19,5 +19,7 @@ jobs:
         run: npm test
       - name: Download licensed 1K surface textures
         run: npm run textures:sync
+      - name: Bundle and verify 86 licensed GLBs
+        run: npm run models:sync -- --strict
       - name: Build
         run: npm run build

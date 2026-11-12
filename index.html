@@ -14,7 +14,7 @@
   <header class="topbar">
    <div class="brand">
     <div class="emblem"><span>V</span></div>
-    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 14</small></div>
+    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 17</small></div>
    </div>
    <nav class="topControls" aria-label="Arayüz panelleri">
     <button id="toggleSettings" class="panelToggle" type="button" aria-controls="settingsPanel" aria-expanded="true">☷ <span>AYARLAR</span></button>
@@ -52,6 +52,9 @@
       <option value="villa">VILLA · CENTRAL GALLERY</option>
     </select>
     <button id="generate" class="primaryButton">↗ &nbsp; GENERATE INTERIOR</button>
+    <button id="shareWorld" class="shareWorld" type="button" aria-label="Dünyanın paylaşılabilir bağlantısını kopyala">
+      <span>↗ DÜNYA BAĞLANTISINI KOPYALA</span>
+    </button>
     <div class="splitStats">
      <div><small>ROOMS</small><strong id="roomTotal">6</strong></div>
      <div><small>OBJECTS</small><strong id="propTotal">—</strong></div>
@@ -79,6 +82,12 @@
     </div>
     <div class="assetStatus"><span id="assetStatus">LOADING MODELS</span><span id="avatarState">AVATAR LOADING</span></div>
     <div class="progress"><div id="assetFill"></div></div>
+    <details class="modelHealth">
+      <summary>3D MODEL DURUMU <span id="assetHealth">YÜKLENİYOR</span></summary>
+      <p id="assetDetails">İndirilen modeller ve yedeklerin durumu burada görüntülenir.</p>
+      <button id="retryAssets" type="button" class="shareWorld">BAŞARISIZ MODELLERİ YENİDEN DENE</button>
+      <button id="resetObjects" type="button" class="shareWorld">KAPI VE CİHAZLARI SIFIRLA</button>
+    </details>
     <div class="credit">CC0 ASSETS · KENNEY / QUATERNIUS / KAYKIT · POWERED BY POLY HAVEN</div>
   </aside>
   <aside id="mapPanel" class="rightPane glass" aria-label="Kat planı">

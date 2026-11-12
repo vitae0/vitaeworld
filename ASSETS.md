@@ -17,7 +17,7 @@ Runtime GLB URLs are revision-pinned in `src/assets.js`. The two current avatar 
 - Do **not** assume an upload to Poly Pizza, Sketchfab or a random aggregation site automatically grants CC0. The primary author's licensing page is the reference.
 - Do **not** import other artists' copyright-restricted models, marketplace items without redistribution rights or models ripped from commercial games.
 - Original pack screenshots, brand identity and author trademarks are not covered by the model's CC0 dedication.
-- The first lab loads models directly from pinned raw GitHub URLs for fast iteration. This is a dependency on third-party hosting; production should download, compress and vendor models under `public/assets/vendor` with this manifest and SHA-256 records.
+- Lab 17 vendors all required model GLBs into `public/models` at build time. The browser prefers these same-origin files. The generated `public/models/sources.json` contains SHA-256 checksums, exact pinned source URLs and failures. GitHub Raw is only a local-development fallback when vendor files have not been generated.
 - Some GLB conversions may differ in dimensions or materials from official pack exports. Use `src/assets.js`'s bounding-box scaling and keep the procedural fallback visible when a request fails.
 
 **Licensing verification date:** 2026-11-10.
@@ -81,3 +81,26 @@ blank floor is generated.
 The active programme affects room-type assignment and finish family.
 External doors use opaque finishes for dwellings and glass in shop
 types, but remain **non-operational** in every programme.
+
+## Lab 17: production GLB vendoring, licensing and diagnostics
+
+- Furniture Kit: **81 unique** listed furniture GLBs + **3 fixtures**,
+  all from the pinned `Hidencod/tge-assets` commit above. Actual
+  filenames/byte sizes were checked against that repository's source
+  directory; no claimed model IDs are missing.
+- Avatars: **2 pinned GLBs**, Quaternius and KayKit, both CC0 with
+  the exact source revisions recorded in `scripts/sync-models.mjs`.
+- `npm run models:sync -- --strict` fetches **86 files**, validates
+  GLB v2 magic and file size, writes SHA-256 and full attribution to
+  `public/models/sources.json`, and fails CI when incomplete.
+- The compiled site includes the generated files directly under
+  `models/furniture/` and `models/avatars/`. No browser cross-origin
+  dependency exists in the ordinary successful production path.
+- Runtime queue caps concurrent unique downloads/parses to 6; repeated
+  meshes share their GLTF source and retain deterministic procedural
+  fallback when even the pinned mirror is unavailable.
+- Check **3D MODEL DURUMU** inside the settings panel to inspect any
+  failed source and retry the current world.
+
+Binary assets are generated during deployment and excluded from Git,
+while the build script and manifest format are version controlled.

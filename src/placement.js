@@ -4,6 +4,7 @@ import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orie
 import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from './interior-quality.js';
 import {polishFurnitureOrientations} from './orientation-pass.js';
 import {blocksWindow,furnitureUseFrontage} from './placement-constraints.js';
+import {ensembleBonus,summarizeCompositions} from './room-ensembles.js';
 
 
 // Room identity constrains optional furnishing. Shared traits such as "modern"
@@ -293,8 +294,11 @@ export function populateRooms(layout,seed=layout.seed){
       const nav=roomAccessibility(layout,room,
        [...objects,{...item.p,roomId:room.id,solid:true}],
        {resolution:2,radius:.21});
+      // Group compositions are tie breakers, never permission to cross a
+      // doorway or override classic semantic candidate ordering.
+      const ensemble=ensembleBonus(room,a,item.p,objects);
       const adjusted=item.score*.25+nav.ratio*5-
-        (nav.doorOpen?0:5)+item.frontage*.34;
+        (nav.doorOpen?0:5)+item.frontage*.34+ensemble;
       const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
       if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
       if(adjusted>navBest){navBest=adjusted;chosen=item;}
@@ -392,6 +396,7 @@ export function populateRooms(layout,seed=layout.seed){
  // experiments but cannot override the proven earlier placement behaviour.
  layout.placementMethod='semantic-rules-v2-access';
  layout.orientationReport=polishFurnitureOrientations(layout);
+ layout.compositionReport=summarizeCompositions(layout);
  layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
    ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
  // Rotating a chair slightly changes the reachable grid. Store FINAL

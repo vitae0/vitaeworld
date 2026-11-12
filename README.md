@@ -1,8 +1,81 @@
-# VitaeWorld | Architecture Lab 16
+# VitaeWorld | Architecture Lab 17
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 17 — Major deterministic world and model-loading update
+
+### Same-origin GLB pipeline (primary fix for models missing in browser)
+
+The old browser fetched each of **81 furniture models, 3 fixture
+models and 2 avatars from external GitHub Raw URLs**. Many concurrent
+requests could fail/timeout, leaving dozens of gray placeholder objects
+even though the models existed upstream.
+
+`scripts/sync-models.mjs` now vendors all **86 required CC0 GLBs**
+into `public/models` during CI and Pages builds. Each byte stream is
+checked for valid glTF 2.0 GLB headers and byte lengths; the generated
+`public/models/sources.json` records its pinned source, SHA-256,
+size, failure reports and licensing. The official pages deployment
+requires **all 86 assets** to download successfully; otherwise it
+fails rather than silently publishing an incomplete version.
+
+The browser uses same-origin URLs, not 86 separate third-party GitHub
+requests. The new `src/model-queue.js` caps loading/parsing at
+**six concurrent unique GLBs**, deduplicates repeated objects, retries
+failures, detects malformed GLBs, and uses pinned CC0 mirrors only as a
+last-resort local development fallback. On failure, the recognizable
+procedural furniture remains visible instead of disappearing. The
+asset-health disclosure reports the unique loaded/failing models and
+offers an explicit reattempt.
+
+For local development:
+```sh
+npm install
+npm run models:sync -- --strict
+npm run textures:sync
+npm run dev
+```
+Do not commit vendor binaries directly. CI downloads exactly the
+files listed by `src/semantics.js` and `src/fixture-specs.js`.
+The resulting built assets are pinned to the provenance manifest.
+
+### Composition-first placement without abandoning the classic heuristic
+
+`src/room-ensembles.js` introduces cheap and deterministic
+configuration tie-breaks **only among the final legal candidate positions**:
+dining chairs spread around their table; desk chairs face their desks;
+beds have bedside tables on complementary sides; kitchen sink, stove
+and fridge form reasonable work distances; sofas, screens and coffee
+tables prefer coherent groups. This does **not** reactivate the
+experimental trained FloorplanQA positional prior. Hard AABB,
+doorway, 5:3 room, window and navigation invariants stay intact.
+Every generated layout now includes a deterministic
+`compositionReport`, with counts and completeness of functional groups.
+
+### Shareable world recipes and local interaction persistence
+
+Use **DÜNYA BAĞLANTISINI KOPYALA** to share the full seed, programme
+and architecture. Opening that link reproduces the same building
+geometry/furnishing in another browser, independent of user accounts.
+
+Doors, cabinets, TV, appliances and water toggles now persist locally
+under a versioned seed+building-type key. Unknown/invalid values
+are ignored, and posed characters are never restored. **KAPI VE
+CİHAZLARI SIFIRLA** resets the current world's toggles.
+
+### Validation and limitations
+
+Tests cover model deduplication, network and damaged GLB failures,
+fallbacks, exact scene reproduction, persistent interactions, and all
+eight architectural grammars' geometry/circulation.
+
+The same-origin vendoring removes the principal known network
+dependency; it does **not** independently prove that every imported
+asset renders correctly on every mobile GPU or that every model has
+perfect art-direction and native forward orientation. Device/browser
+visual QA and actual FPS remain open.
 
 ## Lab 16 — Usable furniture and correctly visible inter-storey slabs
 
