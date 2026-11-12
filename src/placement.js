@@ -238,7 +238,16 @@ export function populateRooms(layout,seed=layout.seed){
      // not in the narrow connector to another part of the room.
      const workEnd=(a.role==='desk'&&rectangularity<.65)?
        1.2*distance(p,door):0;
-     const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd;
+     // A glass display table at the centre of a narrow gallery partitions
+     // the entire room. Keep showcases at the far end instead of the choke.
+     const narrowGallery=room.type==='gallery'&&a.role==='display'&&
+       Math.min(width,depth)<TILE*2.3&&Math.max(width,depth)>TILE*4;
+     const farEnd=width<depth?
+       (door.z>room.z?room.zMin+TILE/2:room.zMax-TILE/2):
+       (door.x>room.x?room.xMin+TILE/2:room.xMax-TILE/2);
+     const galleryEnd=narrowGallery?
+       -3.0*Math.abs((width<depth?p.z:p.x)-farEnd):0;
+     const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd+galleryEnd;
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+architectural+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
