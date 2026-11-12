@@ -131,3 +131,20 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
   kullanıcı tarafından sıfırlanması.
 - Hâlâ açık: farklı cihazlarda yükleme doğrulaması, gerçek FPS,
   tam karakter IK ve otomatik sanat kalitesi değerlendirmesi.
+
+## Lab 18 — Stiller, tüm katlar ve deterministic son düzenlemeler
+
+- 14 tasarım ailesi ve 26 yeni prosedürel yer, duvar, trim ve tavan
+  yüzeyi. Yeni dokular internet gerektirmeden üretilebiliyor.
+- Bina programına uygun stil varsayılanı; elle stil seçimi,
+  paylaşılabilir seed URL'sinde ve yerel kayıtlarda stil kimliği.
+- Şu anki iki katta **her iki katın tam geometrisi ve mobilyaları**
+  görünür. Tek aktif güneş/ortam ışığı, gerçek üst döşeme ve merdiven
+  boşluğu korunuyor. İleride 3+ kat için uzaktaki katlar shell moduna
+  geçecek; henüz üç katlı playable bina iddiası yok.
+- Duvara yapışık çıtalar, kaplama panelleri, dado ve endüstriyel
+  raylar. Kapı/pencere boşluklarına ve dolaşıma müdahale edilmiyor.
+- Oda planı arketipleri, stile göre dekor yoğunluğu,
+  aynı seed ile tekrarlanabilir `styleReport` ve QA.
+- Sonraki: çok katlı yapılar, gerçek 3D pencere/duvar malzeme
+  benchmark'ları ve mobil/masaüstü FPS ölçümü.
