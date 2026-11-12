@@ -38,12 +38,12 @@ function wallFaces(layout,room){
  return candidates;
 }
 function kindsFor(roomType){
- if(roomType==='gallery'||roomType==='studio')return ['art','art','art','shelf','sconce'];
+ if(roomType==='gallery'||roomType==='studio')return ['art','poster','art','shelf','sconce'];
  if(roomType==='bath')return ['sconce','art','sconce'];
  if(roomType==='library')return ['shelf','art','shelf','art','sconce'];
  if(roomType==='kitchen')return ['shelf','sconce','art'];
  if(roomType==='suite')return ['art','art','sconce','shelf'];
- return ['art','art','shelf','sconce','art'];
+ return ['art','poster','art','shelf','sconce','art'];
 }
 function tabletopKinds(role,type){
  if(role==='desk')return ['book-stack','pencil-cup','succulent'];
@@ -92,9 +92,9 @@ export function generateDecorations(layout,seed=layout.seed){
    const kind=R(rng,kindsFor(room.type));
    const d={id:'d-'+room.id+'-'+decorations.length,roomId:room.id,
     source:'wall',kind,x:wall.x,z:wall.z,angle:wall.angle,
-    y:kind==='art'?1.91:kind==='shelf'?2.32:2.28,
-    w:kind==='art'?.78:kind==='shelf'?.80:.25,
-    h:kind==='art'?.65:kind==='shelf'?.42:.28,
+    y:kind==='art'||kind==='poster'?1.91:kind==='shelf'?2.32:2.28,
+    w:kind==='art'||kind==='poster'?.78:kind==='shelf'?.80:.25,
+    h:kind==='art'||kind==='poster'?.65:kind==='shelf'?.42:.28,
     d:.11,mood:mood.name,color:mood.ink,paper:mood.paper,
     accent:mood.accent,leaf:mood.leaf,variant:Math.floor(rng()*5)};
    // Eye-level pictures read as a lived-in room. If a tall bookshelf is
@@ -105,7 +105,7 @@ export function generateDecorations(layout,seed=layout.seed){
      y:d.y-d.h/2};
     return furniture.some(p=>p.roomId===room.id&&volumeOverlap(projected,p,.06));
    };
-   if(occupied()&&kind==='art')d.y=2.43;
+   if(occupied()&&(kind==='art'||kind==='poster'))d.y=2.43;
    if(occupied())continue;
    decorations.push(d);accepted.push(d);
   }
@@ -161,6 +161,45 @@ export function generateDecorations(layout,seed=layout.seed){
      angle:0,mood:mood.name,color:mood.ink,paper:mood.paper,
      accent:mood.accent,leaf:mood.leaf,variant:Math.floor(rng()*5)};
     decorations.push(spec);accepted.push(spec);
+   }
+  }
+  // Ceiling fixtures are independently authored assets and never move floor
+  // collision. The selected cell must belong to the room and not a stairwell.
+  const safeCeiling=room.cells.filter(c=>
+   !layout.stairReservation?.has(c.gz*GRID_W+c.gx)&&
+   layout.doors.every(d=>Math.hypot(c.x-d.x,c.z-d.z)>TILE*.75));
+  if(safeCeiling.length){
+   const chosen=safeCeiling.reduce((a,c)=>!a||
+    Math.hypot(c.x-room.x,c.z-room.z)<Math.hypot(a.x-room.x,a.z-room.z)?c:a,null);
+   const kind=room.circulation?'flush':
+    ['dining','lobby','suite'].includes(room.type)?'chandelier':
+    ['studio','gallery','office'].includes(room.type)?'track':
+    ['kitchen','lounge','games'].includes(room.type)?'pendant':'flush';
+   decorations.push({id:'d-'+room.id+'-'+decorations.length,roomId:room.id,
+    source:'ceiling',kind,x:chosen.x,z:chosen.z,y:3.01,
+    w:kind==='chandelier'?.85:kind==='track'?.78:.48,
+    d:.48,h:.52,angle:0,mood:mood.name,color:mood.ink,
+    paper:mood.paper,accent:mood.accent,leaf:mood.leaf,
+    variant:Math.floor(rng()*5)});
+  }
+  // Rugs are cluster anchors, not extra obstacles. Corners of each carpet
+  // must remain on the actual room footprint, clear of door and stair cells.
+  if(['suite','lounge','library','dining','games','studio','wellness','office'].includes(room.type)){
+   const rugs=shuffled(room.cells,rng).sort((a,b)=>
+     Math.hypot(a.x-room.x,a.z-room.z)-Math.hypot(b.x-room.x,b.z-room.z));
+   for(const c of rugs){
+    const w=Math.min(TILE*1.55,room.xMax-room.xMin-.4),
+          d=Math.min(TILE*1.36,room.zMax-room.zMin-.4);
+    if(w<1.15||d<1.15)continue;
+    if(layout.doors.some(door=>Math.hypot(c.x-door.x,c.z-door.z)<1.30))continue;
+    if(![[1,1],[1,-1],[-1,1],[-1,-1]].every(([sx,sz])=>
+      isInRoom(layout,c.x+sx*w*.51,c.z+sz*d*.51,room.id)))continue;
+    decorations.push({id:'d-'+room.id+'-'+decorations.length,
+     roomId:room.id,source:'floor',kind:'kilim',x:c.x,z:c.z,
+     y:.105,w,d,h:.025,angle:0,mood:mood.name,color:mood.ink,
+     paper:mood.paper,accent:mood.accent,leaf:mood.leaf,
+     variant:Math.floor(rng()*5)});
+    break;
    }
   }
   room.decorationCount=decorations.filter(p=>p.roomId===room.id).length;
