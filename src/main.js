@@ -11,7 +11,7 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'h
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.25:1.75));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.26;
+renderer.toneMappingExposure=1.18;
 renderer.setClearColor(0x06141e);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x08151d);
@@ -55,7 +55,7 @@ function generate(nextSeed){
  $('#seed').value=seed;
  $('#seedText').textContent=seed.toUpperCase();
  $('#roomTotal').textContent=layout.rooms.length;
- $('#propTotal').textContent=layout.props.length;
+ $('#propTotal').textContent=layout.props.length+(layout.decorations?.length||0);
  $('#layoutStatus').textContent=layout.buildingType.toUpperCase();
  $('#buildingName').textContent=layout.buildingName.toUpperCase();
  $('#paletteName').textContent=world.paletteName.toUpperCase();
@@ -169,7 +169,7 @@ function updateLocation(){
      ?Object.entries(ROOM_TYPES[room.type].traits)
        .sort((a,b)=>b[1]-a[1]).slice(0,3)
        .map(([key,val])=>key.toUpperCase()+' '+val).join(' · ')+
-       ' · '+room.furnitureCount+' OBJECTS'
+       ' · '+(room.furnitureCount+(room.decorationCount||0))+' OBJECTS'
      :'MULTIPLE CORRIDOR LOOPS · 40D + 16D';
  }
 }
