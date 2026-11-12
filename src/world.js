@@ -26,10 +26,11 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  const wallMat=material(0xffffff),trimMat=material(palette.trim);
  const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:.80});
  // Floors are one GPU draw call. Per-instance colours encode room character.
- const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),neutral,layout.floors.length);
+ const floorCells=layout.floors.filter(c=>!layout.floorHoles?.has(c.gz*GRID_W+c.gx));
+ const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),neutral,floorCells.length);
  floors.name='SemanticFloorTiles';
  floors.frustumCulled=false;
- layout.floors.forEach((tile,i)=>{
+ floorCells.forEach((tile,i)=>{
    tmp.position.set(tile.x,0,tile.z);tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);tmp.updateMatrix();
    floors.setMatrixAt(i,tmp.matrix);
    const room=layout.rooms.find(r=>r.id===tile.roomId);
@@ -43,9 +44,10 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  floors.instanceMatrix.needsUpdate=true;
  if(floors.instanceColor)floors.instanceColor.needsUpdate=true;
  root.add(floors);
- const roof=new THREE.InstancedMesh(geometry(TILE+.02,.13,TILE+.02),ceilingMat,layout.floors.length);
+ const roofCells=layout.floors.filter(c=>!layout.ceilingHoles?.has(c.gz*GRID_W+c.gx));
+ const roof=new THREE.InstancedMesh(geometry(TILE+.02,.13,TILE+.02),ceilingMat,roofCells.length);
  roof.name='CeilingTiles';roof.frustumCulled=false;
- layout.floors.forEach((tile,i)=>{
+ roofCells.forEach((tile,i)=>{
    tmp.position.set(tile.x,WALL_HEIGHT+.24,tile.z);
    tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);tmp.updateMatrix();
    roof.setMatrixAt(i,tmp.matrix);
