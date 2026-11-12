@@ -148,3 +148,22 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
   aynı seed ile tekrarlanabilir `styleReport` ve QA.
 - Sonraki: çok katlı yapılar, gerçek 3D pencere/duvar malzeme
   benchmark'ları ve mobil/masaüstü FPS ölçümü.
+
+## Lab 19 — İç mekân kapsamlı tamamlama
+
+- Oda tipine göre banyo/servis fayans kaplamaları, mutfak
+  backsplash yüzeyleri, yatak başı ve akustik paneller, dekoratif
+  galeriler ve cove tavan detayları.
+- Tüm kapılarda kasalar/eşikler ve oda işlevine göre
+  sabit numaralı giriş tabelaları; yazı atlası tek dokudur.
+- Kat başına en fazla dört işlevsel oda ışığı, gölge haritası yok.
+- Otomatik/Ekonomi/Dengeli/Görsel grafik modları.
+  FPS düşüşünde mobil çözünürlüğü kademeli azaltma.
+- Tüm katlarda erişim, çakışma, sağlam kapı üstü,
+  banyo mahremiyeti ve son detay geometri denetimi;
+  raporlar kullanıcıya gösteriliyor.
+- Eski semantik yerleşim korunuyor; modeller ve 36 bina
+  programı değişmiyor, eğitimli konum bonusu kapalı.
+- Resmî kalan doğrulama: gerçek tarayıcı görsel inceleme,
+  orta/düşük seviye mobil FPS ve GPU uyumluluğu,
+  detaylı ergonomi/animasyon. Bunlar test edilmiş gibi yazılmayacak.

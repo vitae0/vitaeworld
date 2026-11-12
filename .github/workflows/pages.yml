@@ -28,6 +28,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Verify layout tests
         run: npm test
+      - name: Certify all 36 two-storey interior programmes
+        run: npm run interiors:certify
       - name: Download licensed 1K surface textures
         run: npm run textures:sync
       - name: Bundle and verify 86 licensed GLBs

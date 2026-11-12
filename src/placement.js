@@ -282,7 +282,7 @@ export function populateRooms(layout,seed=layout.seed){
     for(const item of candidates){
      if(shortlist.some(q=>distance(item.p,q.p)<.56))continue;
      shortlist.push(item);
-     if(shortlist.length>= (mandatory?7:4))break;
+     if(shortlist.length>= (mandatory?12:4))break;
     }
     for(const item of shortlist){
      item.frontage=furnitureUseFrontage(layout,room,a,item.p,objects);
@@ -299,8 +299,13 @@ export function populateRooms(layout,seed=layout.seed){
       // doorway or override classic semantic candidate ordering.
       const ensemble=ensembleBonus(room,a,item.p,objects);
       const archetype=archetypePlacementBonus(room,a,item.p,objects);
+      // Required furniture must not divide a room in two. Prefer an
+      // accessible legal candidate even when it is a little less stylish.
+      // Optional furniture retains its original candidate ordering.
+      const safeRequired=nav.doorOpen&&nav.ratio>=.82;
       const adjusted=item.score*.25+nav.ratio*5-
-        (nav.doorOpen?0:5)+item.frontage*.34+ensemble+archetype*.6;
+        (nav.doorOpen?0:5)+item.frontage*.34+ensemble+archetype*.6+
+        (mandatory?(safeRequired?24:0)+nav.ratio*8:0);
       const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
       if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
       if(adjusted>navBest){navBest=adjusted;chosen=item;}

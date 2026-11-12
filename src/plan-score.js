@@ -8,7 +8,10 @@ const PRIOR=Object.freeze({
  central:{target:17,area:27},
  grid:{target:18,area:28},
  courtyard:{target:17,area:28},
- branched:{target:8,area:27}
+ branched:{target:8,area:27},
+ rowhouse:{target:10,area:22},
+ loft:{target:11,area:28},
+ villa:{target:15,area:25}
 });
 export function scoreTopology(layout){
  const prior=PRIOR[layout.buildingType]||PRIOR.compact;

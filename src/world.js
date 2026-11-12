@@ -10,6 +10,9 @@ import {addWindowVisuals} from './window-visuals.js';
 import {daylightAt} from './daylight.js';
 import {stairwellRimSegments} from './floor-visibility.js';
 import {addWallFeatureVisuals} from './wall-feature-visuals.js';
+import {addInteriorFitoutVisuals} from './interior-fitout-visuals.js';
+import {addPracticalLights} from './practical-lighting.js';
+import {addSignageVisuals} from './room-signage-visuals.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -33,6 +36,10 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  const ceiling=new THREE.Group();ceiling.name='CeilingOcclusionLayer';root.add(ceiling);
  const detailGroup=new THREE.Group();detailGroup.name='DetailedInteriorProps';
  root.add(detailGroup);
+ const decorGroup=new THREE.Group();decorGroup.name='OptionalSmallDressing';
+ detailGroup.add(decorGroup);
+ const fixedDecorGroup=new THREE.Group();fixedDecorGroup.name='EssentialLightsAndWallDressings';
+ detailGroup.add(fixedDecorGroup);
  const owned=new Set();
  const tmp=new THREE.Object3D();
  const color=(n)=>new THREE.Color(n);
@@ -137,9 +144,13 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  if(wallMesh.instanceColor)wallMesh.instanceColor.needsUpdate=true;
  root.add(wallMesh);
  addWallFeatureVisuals(root,layout,owned);
+ const fitoutVisuals=addInteriorFitoutVisuals(root,layout,owned,{
+  trimMat,tileMat:floorTileMat,textileMat,ceilingMat,lightColor:palette.light
+ });
  // Window glass uses actual openings cut from the solid exterior walls.
  // Rendered as four instanced batches with shared low-poly trim.
  addWindowVisuals(root,layout,owned);
+ const signageVisuals=addSignageVisuals(root,layout,owned);
  const normalWalls=layout.walls.filter(w=>w.kind==='wall');
  const trimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
  trimMesh.name='ArchitecturalBaseboards';trimMesh.frustumCulled=false;
@@ -202,10 +213,15 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
  detailGroup.add(highlightsMesh);
  // Theme-consistent art, shelves and tabletop details share four GPU batches.
- addModelledDecor(detailGroup,layout.decorations||[],owned,{textileMat});
+ const decorList=layout.decorations||[];
+ addModelledDecor(fixedDecorGroup,decorList.filter(d=>
+  d.source==='wall'||d.source==='ceiling'),owned,{textileMat});
+ addModelledDecor(decorGroup,decorList.filter(d=>
+  d.source==='floor'||d.source==='surface'),owned,{textileMat});
  const hemi=new THREE.HemisphereLight(style?.light||0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
+ const practical=addPracticalLights(root,layout);
  function setDaylight(hour){
   const light=daylightAt(hour);
   hemi.intensity=light.hemisphereIntensity;
@@ -215,6 +231,9 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
   // Ceiling accents are deliberately inexpensive emissive geometry, not
   // hundreds of new realtime lights in every room.
   emissive.emissiveIntensity=.22+(.82*(1-light.sunlight));
+  if(fitoutVisuals.glow)
+   fitoutVisuals.glow.emissiveIntensity=.17+(1-light.sunlight)*.72;
+  practical.setDaylight(light.sunlight);
  }
  setDaylight(14);
  const doors=buildDoorVisuals(root,layout,owned);
@@ -229,8 +248,20 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  return {
   root,floorDeck,detachedFloor,ceiling,detailGroup,
   colors:palette,paletteName:palette.name,
+  fitoutStats:{parts:fitoutVisuals.count,batches:fitoutVisuals.batches,
+   signs:signageVisuals.count},
   setDaylight,
-  setLightingActive(value){hemi.visible=Boolean(value);sun.visible=Boolean(value);},
+  setQualityBudget(budget){
+   decorGroup.visible=budget?.showClutter!==false;
+   practical.setBudget(budget?.practicalLights||0);
+  },
+  setLightingActive(value){
+   hemi.visible=Boolean(value);sun.visible=Boolean(value);
+   practical.setActive(value);
+  },
+  getLightReport(){return {
+   available:practical.availableCount,active:practical.activeCount
+  };},
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
   tick(dt){doors.update(dt);propStates.update(dt);},
   setInteractionState(item,on){
