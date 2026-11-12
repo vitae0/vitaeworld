@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "trained": false,
+  "dataset": "OldDelorean/FloorplanQA-Layouts",
+  "license": "CC BY 4.0",
+  "training_subset": "synthetic bedroom/living_room/kitchen only; HSSD excluded",
+  "groups": {}
+}
