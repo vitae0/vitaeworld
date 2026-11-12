@@ -237,3 +237,15 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
 #assetDetails{font-size:10px;line-height:1.65;color:#b6d1cc;overflow-wrap:anywhere}
 .modelHealth .shareWorld{margin:9px 0 4px}
 @media(max-width:800px){.shareWorld{min-height:44px}}
+
+/* Lab 18 material systems are selectable without opening another modal. */
+#interiorStyle{width:100%;min-height:41px;padding:10px;
+ margin:7px 0 12px;border:1px solid rgba(163,222,213,.38);
+ background:#122c35;color:#e2f5eb;border-radius:7px;
+ font-size:11px;font-weight:700;letter-spacing:.3px;cursor:pointer}
+#interiorStyle:focus-visible{outline:2px solid #adf6da;outline-offset:2px}
+#interiorStyle option{background:#102734}
+.styleStatistics{font-size:9px;font-weight:700;line-height:1.6;
+ color:#a4d7ca;letter-spacing:.55px;padding:9px 0;
+ border-bottom:1px solid rgba(153,207,192,.22)}
+@media(max-width:800px){#interiorStyle{min-height:44px}}
