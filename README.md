@@ -1,4 +1,4 @@
-# VitaeWorld | Architecture Lab 08
+# VitaeWorld | Architecture Lab 09
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
@@ -14,17 +14,55 @@ A new **Building Architecture** dropdown controls the building family. **Auto** 
 | **Central Atrium** (`central`) | Large shared lobby and cross-connected wings | 16 |
 | **Urban Grid** (`grid`) | Intersecting corridor grid, repeatable parcels | 18 |
 | **Courtyard Loop** (`courtyard`) | Looping routes around an open-air courtyard | 17 |
-| **Connected Wings** (`branched`) | Cross-links and lateral wings with secondary loops | 12 |
+| **Connected Wings** (`branched`) | Cross-links and orthogonal compact wing parcels | 8 |
 
-Room counts reflect the current grammar and may change if its parameters are tuned. Rooms inherit functional definitions from 11 room archetypes; corridors, setbacks, entrances and 45° wall chamfers are generated independently from their furnishings.
+Room counts reflect the current grammar and may change if its parameters are tuned. Rooms inherit functional definitions from 11 room archetypes; corridors, setbacks, entrances and orthogonal wall partitions are generated independently from their furnishings.
 
-The floor plan uses a 25×19 occupancy grid of 1.3m cells. Room splitting validates corridor access and component connectivity; furniture placement validates the actual cell ownership of **the complete furniture footprint**, not simply the room bounding box.
+The floor plan uses a 25×19 occupancy grid of 1.26m cells. Room splitting validates corridor access and component connectivity; furniture placement validates the actual cell ownership of **the complete furniture footprint**, not simply the room bounding box.
 
 ## Furniture orientation, not just position
 
 61 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
+
+## Lab 09 — Orthogonal interiors and complete visual-material passes
+
+**Strict geometry:** New room subdivision enforces an axis-aligned
+bounding-box **long side / short side <= 5:3** in each private room.
+The old 45-degree beveled wall generator has been removed completely.
+An acyclic room-to-corridor door graph provides access when a compact
+sub-room does not touch the main corridor directly; every connecting
+door's two approaches remain clear. The branched architecture has been
+redesigned to remove long 2-cell-wide slots and fake closet strings.
+
+**Material pipeline:** 1K CC0 diffuse, normal and roughness textures
+from Poly Haven are downloaded via `npm run textures:sync` during
+GitHub Pages and CI builds, with SHA-256 manifest, size checks and
+provenance. Four families cover plaster, timber, ceramic and fabric.
+A lightweight local CanvasTexture procedural fallback means the browser
+does not show blank surfaces when the API cannot be reached. Wet rooms
+use tile; residential and circulation surfaces get wood; rug and kilim
+meshes share a fabric family. Source GLBs retain their own native
+materials.
+
+**Architectural decoration:** Instance-batched baseboards, crown molding,
+chair rails, artworks/posters, wall sconces, ceiling fixtures, track
+lights, hanging chandeliers, pendants and area rugs. Fixture meshes are
+emissive, not dozens of expensive real-time point lights. Surface
+details respect door access; floor textiles never add collision solids.
+
+**Floorplan selection:** `src/plan-score.js` selects the best among three
+topological candidates using transparent geometric and circulation
+criteria, *before* expensive furniture generation. This is a
+rule-based baseline, not an externally trained neural model; vetted
+dataset options and restrictions are in
+`docs/REFERENCE_CORPUS.md`.
+
+**Mobile:** Lower texture resolution, repeated tile instancing, capped
+pixel ratio, floor culling outside the active storey and no separate
+dynamic per-fixture lights reduce unnecessary work. Real-device
+performance still requires manual profiling.
 
 ## Lab 08 — Collapsible UI and mobile touch feel
 

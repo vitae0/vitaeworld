@@ -60,9 +60,8 @@ for(const {style,seed} of cases){
   assert.ok(layout.rooms.length>=7&&layout.rooms.length<=21,'room count');
   assert.equal(layout.doors.length,layout.rooms.length);
   assert.ok(layout.props.length>=layout.rooms.length*4,'mostly empty rooms');
-  assert.ok(layout.chamfers.length>=5,'diagonal walls');
-  for(const ch of layout.chamfers)
-   assert.ok(Math.abs(Math.abs(Math.sin(ch.angle))-Math.SQRT1_2)<1e-7,'not 45 degrees');
+  assert.equal(layout.chamfers.length,0,'45-degree walls were reintroduced');
+  assert.ok(layout.walls.every(w=>!w.angle&&w.kind!=='diagonal'),'nonorthogonal wall');
   const hall=layout.floors.filter(x=>x.roomId===0);
   const seen=new Set([hall[0].gz*GRID_W+hall[0].gx]),queue=[hall[0]];
   let edges=0;
@@ -84,11 +83,28 @@ for(const {style,seed} of cases){
   assert.ok(isWalkable(layout,layout.spawn.x,layout.spawn.z),'spawn blocked');
   for(const r of layout.rooms){
    assert.ok(r.area>=12&&r.area<=60,'room size '+r.area);
+   const width=r.xMax-r.xMin,depth=r.zMax-r.zMin;
+   assert.ok(Math.max(width,depth)/Math.min(width,depth)<=5/3+1e-8,
+     'room exceeds 5:3 ratio '+r.type);
    assert.ok(r.furnitureCount>=4,'underfurnished '+r.type);
    assert.ok(!r.missingEssentials?.length,'missing required '+r.missingEssentials);
    const present=layout.props.filter(p=>p.roomId===r.id&&p.mandatory).map(p=>p.model);
    for(const model of ROOM_TYPES[r.type].required)
     assert.ok(present.includes(model),'required '+r.type+' '+model);
+  }
+  for(const room of layout.rooms){
+   const visited=new Set(),queue=[room.id];
+   let corridorReached=false;
+   for(let at=0;at<queue.length;at++){
+    const id=queue[at];
+    if(visited.has(id))continue;
+    visited.add(id);
+    const door=layout.doors.find(d=>d.roomId===id);
+    assert.ok(door,'subroom missing a connecting door');
+    if(door.toRoomId===0){corridorReached=true;break;}
+    queue.push(door.toRoomId);
+   }
+   assert.ok(corridorReached,'subroom inaccessible from hall '+room.id);
   }
   for(const door of layout.doors){
    assert.ok(isWalkable(layout,door.x,door.z,.22),'door blocked');

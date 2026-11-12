@@ -28,6 +28,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Verify layout tests
         run: npm test
+      - name: Download licensed 1K surface textures
+        run: npm run textures:sync
       - name: Build static site
         run: npm run build
       - name: Set up GitHub Pages

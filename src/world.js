@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {ROOM_THEMES,TILE,WALL_HEIGHT,GRID_W,GRID_H} from './layout.js';
 import {addFurniture} from './assets.js';
 import {addDecorVisuals} from './decor-visuals.js';
+import {createSurfaceMaterial} from './materials.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -22,28 +23,42 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
   owned.add(m);return m;
  }
  function geometry(w,h,d){const g=new THREE.BoxGeometry(w,h,d);owned.add(g);return g;}
- const neutral=material(0xffffff),ceilingMat=material(0xdde5e8);
- const wallMat=material(0xffffff),trimMat=material(palette.trim);
+ const floorWoodMat=createSurfaceMaterial('wood',owned,{roughness:.79});
+ const floorTileMat=createSurfaceMaterial('tile',owned,{roughness:.73});
+ const ceilingMat=createSurfaceMaterial('plaster',owned,{tint:0xece5db});
+ const wallMat=createSurfaceMaterial('plaster',owned);
+ const trimMat=createSurfaceMaterial('wood',owned,{tint:palette.trim,roughness:.68});
+ const textileMat=createSurfaceMaterial('fabric',owned,{roughness:.95});
  const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:.80});
- // Floors are one GPU draw call. Per-instance colours encode room character.
+ // Tile in wet/service rooms, timber in living and circulation areas.
+ // Each family is a single instanced draw call with a 1K PBR or local fallback
+ // pattern, never one material/mesh per grid cell.
  const floorCells=layout.floors.filter(c=>!layout.floorHoles?.has(c.gz*GRID_W+c.gx));
- const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),neutral,floorCells.length);
- floors.name='SemanticFloorTiles';
- floors.frustumCulled=false;
- floorCells.forEach((tile,i)=>{
-   tmp.position.set(tile.x,0,tile.z);tmp.rotation.set(0,0,0);tmp.scale.set(1,1,1);tmp.updateMatrix();
+ const wetTypes=new Set(['bath','kitchen','utility','landing']);
+ for(const family of ['wood','tile']){
+  const cells=floorCells.filter(tile=>{
+   const room=layout.rooms.find(r=>r.id===tile.roomId);
+   return (wetTypes.has(room?.type)?'tile':'wood')===family;
+  });
+  if(!cells.length)continue;
+  const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),
+   family==='tile'?floorTileMat:floorWoodMat,cells.length);
+  floors.name='PBRFloor_'+family;floors.frustumCulled=false;
+  cells.forEach((tile,i)=>{
+   tmp.position.set(tile.x,0,tile.z);tmp.rotation.set(0,0,0);
+   tmp.scale.set(1,1,1);tmp.updateMatrix();
    floors.setMatrixAt(i,tmp.matrix);
    const room=layout.rooms.find(r=>r.id===tile.roomId);
-   const base=tile.roomId===0?color(palette.hall):
-     tint(ROOM_THEMES[room.type],palette.floor,.73);
-   // Subtle architectural floor variation, tied to geometry rather than RNG.
-   const shade=((tile.gx*7+tile.gz*11)%9)*.006;
+   const theme=room?ROOM_THEMES[room.type]:palette.hall;
+   const base=tint(theme,0xffffff,.68);
+   const shade=((tile.gx*7+tile.gz*11)%9)*.004;
    base.lerp(color(0xffffff),shade);
    floors.setColorAt(i,base);
- });
- floors.instanceMatrix.needsUpdate=true;
- if(floors.instanceColor)floors.instanceColor.needsUpdate=true;
- root.add(floors);
+  });
+  floors.instanceMatrix.needsUpdate=true;
+  if(floors.instanceColor)floors.instanceColor.needsUpdate=true;
+  root.add(floors);
+ }
  const roofCells=layout.floors.filter(c=>!layout.ceilingHoles?.has(c.gz*GRID_W+c.gx));
  const roof=new THREE.InstancedMesh(geometry(TILE+.02,.13,TILE+.02),ceilingMat,roofCells.length);
  roof.name='CeilingTiles';roof.frustumCulled=false;
@@ -74,6 +89,36 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
    trimMesh.setMatrixAt(i,tmp.matrix);
  });
  trimMesh.instanceMatrix.needsUpdate=true;root.add(trimMesh);
+ // Continuous crown molding and selective dado/chair rails. All profiles
+ // follow the orthogonal wall segments, including walls beside door openings.
+ const crownMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
+ crownMesh.name='CrownMolding';
+ normalWalls.forEach((w,i)=>{
+  tmp.position.set(w.x,WALL_HEIGHT-.01,w.z);tmp.rotation.set(0,0,0);
+  tmp.scale.set(w.w+.065,.115,w.d+.065);tmp.updateMatrix();
+  crownMesh.setMatrixAt(i,tmp.matrix);
+ });
+ crownMesh.instanceMatrix.needsUpdate=true;root.add(crownMesh);
+ const dadoTypes=new Set(['lounge','suite','dining','library','lobby','corridor']);
+ const dadoWalls=normalWalls.filter(w=>{
+  const {gx,gz}=((x,z)=>({gx:Math.floor(x/TILE+GRID_W/2),
+    gz:Math.floor(z/TILE+GRID_H/2)}))(w.x,w.z);
+  for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+   const x=gx+dx,z=gz+dz;
+   if(x<0||z<0||x>=GRID_W||z>=GRID_H)continue;
+   const id=(layout.zoneGrid||layout.grid)[z*GRID_W+x];
+   if(dadoTypes.has(layout.rooms.find(r=>r.id===id)?.type))return true;
+  }
+  return false;
+ });
+ const dadoMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,dadoWalls.length);
+ dadoMesh.name='ChairRailAndWallPanelTrim';
+ dadoWalls.forEach((w,i)=>{
+  tmp.position.set(w.x,1.28,w.z);tmp.rotation.set(0,0,0);
+  tmp.scale.set(w.w+.038,.055,w.d+.038);tmp.updateMatrix();
+  dadoMesh.setMatrixAt(i,tmp.matrix);
+ });
+ dadoMesh.instanceMatrix.needsUpdate=true;root.add(dadoMesh);
  // Doorway accent lighting follows the actual irregular wall topology.
  const highlights=[];
  for(const door of layout.doors){
@@ -83,7 +128,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
      w:wide?1.6:.055,d:wide?.055:1.6,c:ROOM_THEMES[room.type]});
  }
  for(const tile of layout.floors){
-   if(tile.roomId!==0)continue;
+   if(!layout.rooms.find(r=>r.id===tile.roomId)?.circulation)continue;
    if((tile.gx+2*tile.gz)%13===0)
      highlights.push({x:tile.x,z:tile.z,y:WALL_HEIGHT+.15,w:.7,d:.30,c:palette.light});
  }
@@ -97,7 +142,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
  root.add(highlightsMesh);
  // Theme-consistent art, shelves and tabletop details share four GPU batches.
- addDecorVisuals(root,layout.decorations||[],owned);
+ addDecorVisuals(root,layout.decorations||[],owned,{textileMat});
  const hemi=new THREE.HemisphereLight(0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);

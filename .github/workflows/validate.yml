@@ -17,5 +17,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Unit tests
         run: npm test
+      - name: Download licensed 1K surface textures
+        run: npm run textures:sync
       - name: Build
         run: npm run build

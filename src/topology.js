@@ -78,10 +78,12 @@ function topologicalGrid(rng,style){
   fillRect(10,14,8,10,(x,z)=>{grid[idx(x,z)]=OUTSIDE;});
   atrium={x:0,z:0,kind:'open-air'};
  }else if(style==='branched'){
-  x0=1;x1=23;z0=2;z1=16;
+  // The wings should frame 3-5 tile-deep rooms. The former closely
+  // spaced cross-halls left 2x8 bedroom strips with no usable proportions.
+  x0=1;x1=23;z0=3;z1=14;
   fillRect(x0,x1,8,9);
-  fillRect(6,7,4,13);fillRect(16,17,4,13);
-  fillRect(7,16,4,5);fillRect(7,16,12,13);
+  fillRect(6,7,3,14);fillRect(16,17,3,14);
+  fillRect(7,16,3,4);fillRect(7,16,13,14);
  }
  // Each component not already circulation is a room candidate.
  // Subdivide oversized bays only when BOTH resulting rooms can open on a corridor.
@@ -123,43 +125,71 @@ function topologicalGrid(rng,style){
   const x=c.gx+dx,z=c.gz+dz;
   return inside(x,z)&&grid[idx(x,z)]===HALL;
  }));
- function trySplit(cells){
+ // Compact, entirely orthogonal room grammar. Every rectangular bounding box
+ // must have an aspect ratio <= 5:3. The old size-only splitter made 2x8
+ // bedrooms; a small room with an internal connecting door is preferable.
+ const ROOM_RATIO=5/3, MAX_ROOM_CELLS=30;
+ const geom=(cells)=>{
   const xs=cells.map(c=>c.gx),zs=cells.map(c=>c.gz);
-  const rangeX=Math.max(...xs)-Math.min(...xs),rangeZ=Math.max(...zs)-Math.min(...zs);
+  const width=Math.max(...xs)-Math.min(...xs)+1,
+        depth=Math.max(...zs)-Math.min(...zs)+1;
+  return {width,depth,ratio:Math.max(width,depth)/Math.min(width,depth),
+   fill:cells.length/(width*depth)};
+ };
+ const qualifies=cells=>{
+  const g=geom(cells);
+  return g.ratio<=ROOM_RATIO+1e-9&&cells.length<=MAX_ROOM_CELLS;
+ };
+ function trySplit(cells){
+  const g=geom(cells);
+  const axes=g.width>=g.depth?['gx','gz']:['gz','gx'];
   const options=[];
-  for(const axis of (rangeX>rangeZ?['gx','gz']:['gz','gx'])){
-   const values=cells.map(c=>c[axis]),a=Math.min(...values),b=Math.max(...values);
-   for(let cut=a+1;cut<b;cut++){
-    const left=cells.filter(c=>c[axis]<=cut),right=cells.filter(c=>c[axis]>cut);
-    if(Math.min(left.length,right.length)<10 || !hasDoor(left)||!hasDoor(right))continue;
+  for(const axis of axes){
+   const vs=cells.map(c=>c[axis]),a=Math.min(...vs),b=Math.max(...vs);
+   for(let cut=a;cut<b;cut++){
+    const left=cells.filter(c=>c[axis]<=cut),
+          right=cells.filter(c=>c[axis]>cut);
+    if(Math.min(left.length,right.length)<4)continue;
     if(!connected(left)||!connected(right))continue;
-    // Balance room sizes and prefer to avoid skinny one-cell strips.
-    const sizeBias=Math.abs(left.length-right.length)*.06;
-    const widthPenalty=Math.max(0,2-(cut-a))*1.2+Math.max(0,2-(b-cut))*1.2;
-    options.push({left,right,score:sizeBias+widthPenalty+rng()*.1});
+    const l=geom(left),r=geom(right);
+    // Never create a one-cell-wide room or a wall-less diagonal parcel.
+    if(Math.min(l.width,l.depth,r.width,r.depth)<2)continue;
+    const over=x=>Math.max(0,x.ratio-ROOM_RATIO);
+    const score=14*(over(l)+over(r))
+      +.065*(Math.max(0,left.length-MAX_ROOM_CELLS)+
+              Math.max(0,right.length-MAX_ROOM_CELLS))
+      +.028*Math.abs(left.length-right.length)
+      +1.9*((1-l.fill)+(1-r.fill))
+      +(hasDoor(left)&&hasDoor(right)?-1.1:0)
+      +rng()*.0001;
+    options.push({left,right,score});
    }
   }
   options.sort((a,b)=>a.score-b.score);
   return options[0]||null;
  }
  let roomsCells=components;
- for(let attempt=0;attempt<36;attempt++){
-  const eligible=roomsCells.map((cells,index)=>({cells,index}))
-   .filter(o=>o.cells.length>cfg.maxRoomCells && roomsCells.length<cfg.targetRooms+5)
-   .sort((a,b)=>b.cells.length-a.cells.length);
-  if(!eligible.length && roomsCells.length>=cfg.targetRooms)break;
-  const option=(eligible.length?eligible:roomsCells.map((cells,index)=>({cells,index}))
-      .filter(x=>x.cells.length>=18).sort((a,b)=>b.cells.length-a.cells.length))
-    .map(entry=>({...entry,split:trySplit(entry.cells)}))
-    .find(entry=>entry.split);
-  if(!option)break;
-  roomsCells.splice(option.index,1,option.split.left,option.split.right);
+ for(let attempt=0;attempt<100;attempt++){
+  const eligible=roomsCells.map((cells,index)=>({cells,index,g:geom(cells)}))
+    .filter(o=>!qualifies(o.cells))
+    .sort((a,b)=>Math.max(0,b.g.ratio-ROOM_RATIO)*20+b.cells.length*.04-
+       (Math.max(0,a.g.ratio-ROOM_RATIO)*20+a.cells.length*.04));
+  if(!eligible.length)break;
+  if(roomsCells.length>=65)throw Error('Excessive subdivision in '+style);
+  const candidate=eligible.map(o=>({...o,split:trySplit(o.cells)}))
+    .find(o=>o.split);
+  if(!candidate)break; // asserted below with a diagnostic
+  roomsCells.splice(candidate.index,1,candidate.split.left,candidate.split.right);
  }
- if(roomsCells.length<5||roomsCells.length>22)throw Error('Building grammar produced invalid room count');
+ const unresolved=roomsCells.filter(c=>!qualifies(c));
+ if(unresolved.length)throw Error('Cannot form 5:3 room without disconnecting parcels in '+style+
+   ': '+unresolved.map(c=>JSON.stringify(geom(c))).join(', '));
+ if(roomsCells.length<5||roomsCells.length>65)
+  throw Error('Building grammar produced invalid room count: '+roomsCells.length);
  // Assign wide, furniture-heavy functions to naturally spacious parcels.
  // Purely shuffling room labels can put a dining table into a narrow L-shaped
  // passage even when an adjacent room is much more suitable.
- const chosen=shuffle(Object.keys(ROOM_TYPES).filter(key=>!ROOM_TYPES[key].circulation),rng),rooms=[];
+ const chosen=shuffle(Object.keys(ROOM_TYPES).filter(key=>!ROOM_TYPES[key].circulation&&!ROOM_TYPES[key].micro),rng),rooms=[];
  const selected=Array.from({length:roomsCells.length},(_,i)=>chosen[i%chosen.length]);
  const demand={dining:10,lounge:9,kitchen:8,suite:7,games:6,
    studio:5,library:4,wellness:3,office:2,gallery:1,bath:0};
@@ -178,7 +208,7 @@ function topologicalGrid(rng,style){
   assigned[spatialRank[j].i]=typesRank[j].type;
  for(let i=0;i<roomsCells.length;i++){
   const cells=roomsCells[i].map(c=>({...c,...cellWorld(c.gx,c.gz)}));
-  const id=i+1,type=assigned[i];
+  const id=i+1,type=roomsCells[i].length<8?'utility':assigned[i];
   for(const c of cells)grid[idx(c.gx,c.gz)]=id;
   const x=cells.reduce((s,c)=>s+c.x,0)/cells.length,z=cells.reduce((s,c)=>s+c.z,0)/cells.length;
   rooms.push({id,type,kind:type,name:ROOM_TYPES[type].name,
@@ -195,24 +225,51 @@ function topologicalGrid(rng,style){
 }
 const rzSide=(z)=>z===0?'north':z===2?'south':'middle';
 function chooseDoors(grid,rooms,rng){
- return rooms.map(room=>{
-  const options=[];
+ // BFS on room adjacency to circulation. A parcel that cannot open directly
+ // on a corridor receives one connecting door to a room closer to the hall.
+ // This prevents otherwise impossible 2x8 parcels without sealing rooms off.
+ const neighbors=new Map(rooms.map(r=>[r.id,new Set()]));
+ const distances=new Map();
+ for(const room of rooms)for(const c of room.cells)for(const {dx,dz} of DIRS){
+  const x=c.gx+dx,z=c.gz+dz;
+  if(!inside(x,z))continue;
+  const target=grid[idx(x,z)];
+  if(target===HALL)distances.set(room.id,0);
+  else if(target>0&&target!==room.id)neighbors.get(room.id).add(target);
+ }
+ const queue=[...distances.keys()];
+ for(let at=0;at<queue.length;at++){
+  const parent=queue[at],level=distances.get(parent);
+  for(const near of neighbors.get(parent)){
+   if(!distances.has(near)){distances.set(near,level+1);queue.push(near);}
+  }
+ }
+ if(distances.size!==rooms.length)
+  throw Error('Disconnected room-to-circulation graph');
+ const doors=[];
+ for(const room of rooms){
+  const options=[],distance=distances.get(room.id);
   for(const c of room.cells)for(const {dx,dz} of DIRS){
    const nx=c.gx+dx,nz=c.gz+dz;
-   if(!inside(nx,nz)||grid[idx(nx,nz)]!==HALL)continue;
+   if(!inside(nx,nz))continue;
+   const target=grid[idx(nx,nz)];
+   const corridor=target===HALL;
+   if(!corridor && !(target>0&&distances.get(target)<distance))continue;
    const shared=DIRS.filter(d=>inside(c.gx+d.dx,c.gz+d.dz)&&
-       grid[idx(c.gx+d.dx,c.gz+d.dz)]===room.id).length;
-   const score=2*(shared>=2)+.1*rng()-
-      .18*Math.hypot(c.x-room.x,c.z-room.z);
+     grid[idx(c.gx+d.dx,c.gz+d.dz)]===room.id).length;
+   const score=3*(corridor?1:0)+.8*(shared>=2)
+      -.18*Math.hypot(c.x-room.x,c.z-room.z)+rng()*.03;
    options.push({x:c.x+dx*TILE/2,z:c.z+dz*TILE/2,
-      roomId:room.id,roomCell:{x:c.x,z:c.z},
-      hallCell:cellWorld(nx,nz),edgeKey:edgeKey(c.gx,c.gz,dx,dz),
-      axis:dx?'z':'x',dx,dz,score,side:room.side});
+     roomId:room.id,toRoomId:corridor?HALL:target,
+     roomCell:{x:c.x,z:c.z},hallCell:cellWorld(nx,nz),
+     edgeKey:edgeKey(c.gx,c.gz,dx,dz),axis:dx?'z':'x',
+     dx,dz,score,side:room.side});
   }
   options.sort((a,b)=>b.score-a.score);
-  if(!options.length)throw Error('No corridor doorway for room '+room.id);
-  return options[0];
- });
+  if(!options.length)throw Error('No connected doorway for '+room.id);
+  doors.push(options[0]);
+ }
+ return doors;
 }
 function wallsFromGrid(grid,doors){
  const out=[],doorEdges=new Set(doors.map(d=>d.edgeKey));
@@ -245,63 +302,15 @@ function wallsFromGrid(grid,doors){
  }
  return out;
 }
-function bevelCorners(grid,rooms,doors,walls,rng){
- const out=[],used=new Set(),doorKeys=new Set(doors.map(d=>d.edgeKey));
- const near=(a,b)=>Math.abs(a-b)<.002;
- for(const room of shuffle(rooms,rng)){
-  const eligible=[];
-  for(const c of room.cells)for(const sx of [-1,1])for(const sz of [-1,1]){
-   const aX=c.gx+sx,aZ=c.gz+sz;
-   if(!inside(aX,c.gz)||!inside(c.gx,aZ))continue;
-   const nX=grid[idx(aX,c.gz)],nZ=grid[idx(c.gx,aZ)];
-   if(nX===room.id||nZ===room.id)continue;
-   if(doorKeys.has(edgeKey(c.gx,c.gz,sx,0))||
-      doorKeys.has(edgeKey(c.gx,c.gz,0,sz)))continue;
-   const wx=c.x+sx*TILE/2,wz=c.z+sz*TILE/2;
-   const wallX=walls.findIndex((w,i)=>!used.has(i)&&w.kind==='wall'&&
-     near(w.x,wx)&&near(w.z,c.z)&&near(w.w,WALL_THICKNESS)&&near(w.d,TILE));
-   const wallZ=walls.findIndex((w,i)=>!used.has(i)&&w.kind==='wall'&&
-     near(w.x,c.x)&&near(w.z,wz)&&near(w.w,TILE)&&near(w.d,WALL_THICKNESS));
-   if(wallX<0||wallZ<0)continue;
-   const quality=(nX===OUTSIDE?3:0)+(nZ===OUTSIDE?3:0)+rng()*.8;
-   eligible.push({c,sx,sz,wallX,wallZ,quality});
-  }
-  eligible.sort((a,b)=>b.quality-a.quality);
-  const pick=eligible[0];
-  if(!pick)continue;
-  const {c,sx,sz,wallX,wallZ}=pick;
-  if(used.has(wallX)||used.has(wallZ))continue;
-  const cut=.62;
-  walls[wallX].z-=sz*cut/2;walls[wallX].d-=cut;
-  walls[wallZ].x-=sx*cut/2;walls[wallZ].w-=cut;
-  used.add(wallX);used.add(wallZ);
-  const cornerX=c.x+sx*TILE/2,cornerZ=c.z+sz*TILE/2;
-  const ax=cornerX-sx*cut,az=cornerZ;
-  const bx=cornerX,bz=cornerZ-sz*cut;
-  const angle=-Math.atan2(bz-az,bx-ax);
-  walls.push({x:(ax+bx)/2,z:(az+bz)/2,w:cut*Math.SQRT2,d:WALL_THICKNESS,
-    height:WALL_HEIGHT,y:.10+WALL_HEIGHT/2,kind:'diagonal',
-    angle,ax,az,bx,bz});
-  out.push({roomId:room.id,cornerX,cornerZ,ax,az,bx,bz,cut,angle});
- }
- return out;
-}
 function pointBoxDistance(x,z,o){
  const cx=clamp(x,o.x-o.w/2,o.x+o.w/2),
        cz=clamp(z,o.z-o.d/2,o.z+o.d/2);
  return Math.hypot(x-cx,z-cz);
 }
-function segmentDistance(x,z,o){
- const vx=o.bx-o.ax,vz=o.bz-o.az,den=vx*vx+vz*vz;
- const t=clamp(((x-o.ax)*vx+(z-o.az)*vz)/(den||1),0,1);
- return Math.hypot(x-o.ax-t*vx,z-o.az-t*vz);
-}
 export function isWalkable(layout,x,z,radius=.29){
  const {gx,gz}=worldCell(x,z);
  if(!inside(gx,gz)||layout.grid[idx(gx,gz)]===OUTSIDE)return false;
- return !(layout.obstacles||[]).some(o=>o.kind==='diagonal'?
-   segmentDistance(x,z,o)<radius+WALL_THICKNESS/2 :
-   pointBoxDistance(x,z,o)<radius);
+ return !(layout.obstacles||[]).some(o=>pointBoxDistance(x,z,o)<radius);
 }
 export function generateTopology(seed='vitae-001',requestedType='auto'){
  const rng=seededRandom(String(seed)+'::architecture');
@@ -310,7 +319,7 @@ export function generateTopology(seed='vitae-001',requestedType='auto'){
  const {grid,rooms,atrium,footprint}=topologicalGrid(rng,style);
  const doors=chooseDoors(grid,rooms,rng);
  const walls=wallsFromGrid(grid,doors);
- const chamfers=bevelCorners(grid,rooms,doors,walls,rng);
+ const chamfers=[]; // Orthogonal walls only; no diagonal corner cuts.
  const floors=[];
  for(let z=0;z<GRID_H;z++)for(let x=0;x<GRID_W;x++){
   const roomId=grid[idx(x,z)];
@@ -319,7 +328,7 @@ export function generateTopology(seed='vitae-001',requestedType='auto'){
  const hall=floors.filter(c=>c.roomId===HALL);
  const center=hall.reduce((a,c)=>!a||Math.hypot(c.x,c.z)<Math.hypot(a.x,a.z)?c:a,null);
  const layout={seed:String(seed),grid,rooms,doors,walls,chamfers,floors,
-  props:[],obstacles:walls.filter(w=>w.kind==='wall'||w.kind==='diagonal').map(w=>({...w})),
+  props:[],obstacles:walls.filter(w=>w.kind==='wall').map(w=>({...w})),
   tile:TILE,buildingType:style,buildingName:BUILDING_TYPES[style].name,
   footprint,atrium,
   spawn:{x:center.x,z:center.z},bounds:{
