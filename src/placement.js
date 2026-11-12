@@ -140,8 +140,16 @@ function fits(room,p,others,door,layout,rug){
    if(!check(x,z))return false;
  for(const x of [minX,maxX])for(const z of [minZ,maxZ])
   if(!check(x,z))return false;
- if(boxDistance(door.x,door.z,p)<.86||
-    boxDistance(door.roomCell.x,door.roomCell.z,p)<.64)return false;
+ // A private room can now be an access path to a compact neighbor.
+ // Keep BOTH sides of every connecting doorway open, not only the room's
+ // own outgoing door. This preserves the entire door graph in practice.
+ const passages=layout.doors.filter(d=>d.roomId===room.id||
+   d.toRoomId===room.id);
+ if(passages.some(d=>{
+  const entry=d.roomId===room.id?d.roomCell:d.hallCell;
+  return boxDistance(d.x,d.z,p)<.86||
+    boxDistance(entry.x,entry.z,p)<.64;
+ }))return false;
  // Corner cutouts are true physical constraints, not visual-only diagonals.
  for(const cut of layout.chamfers){
   if(cut.roomId!==room.id)continue;
