@@ -6,6 +6,7 @@ import {ROOM_TYPES} from './semantics.js';
 import {buildBuildingWorld} from './building-world.js';
 import {CHARACTERS,addCharacter,modelLoadMetrics} from './assets.js';
 import {recipeFromQuery,recipeQuery} from './scene-recipe.js';
+import {worldStateKey,parseSavedStates,serialiseSavedStates} from './world-persistence.js';
 import {Controller} from './controls.js';
 import {initPanels} from './ui-panels.js';
 import {createInteractionSystem} from './interactions.js';
@@ -57,6 +58,18 @@ let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
 let interactions=null,selectedInteraction=null,interactionFrames=0;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
+const recipe=()=>({seed,style:buildingStyle,program:buildingProgram});
+function readWorldState(){
+ try{return parseSavedStates(localStorage.getItem(worldStateKey(recipe())));}
+ catch{return {};}
+}
+function writeWorldState(){
+ try{
+  localStorage.setItem(worldStateKey(recipe()),
+   serialiseSavedStates(interactions.exportStates()));
+ }catch{/* private mode or storage limit: gameplay still works */ }
+}
+
 let daylightHour=14,daylightAutomatic=false,daylightFrames=0;
 const clock=new THREE.Clock();
 let frames=0,lastFPS=0;
@@ -131,6 +144,11 @@ function generate(nextSeed){
  else controller=new Controller(canvas,camera,building,avatar,$('#touchPad'),$('#thumb'));
  controller.setTouchSensitivity($('#touchSensitivity').value);
  controller.setInteractionSystem(interactions);
+ // Restore only known toggles for this exact seed/program/architecture.
+ // Poses are intentionally never restored.
+ for(const {item,on} of interactions.importStates(readWorldState())){
+  world.setInteractionState(item,on);
+ }
  world.setCurrentLevel(0);
  world.setFirstPerson(controller.mode==='first');
  updateDaylight();
@@ -181,6 +199,10 @@ $('#buildingStyle').addEventListener('change',e=>{
 $('#generate').addEventListener('click',()=>generate($('#seed').value));
 $('#random').addEventListener('click',()=>generate(newSeed()));
 $('#retryAssets').addEventListener('click',()=>generate(seed));
+$('#resetObjects').addEventListener('click',()=>{
+ try{localStorage.removeItem(worldStateKey(recipe()));}catch{}
+ generate(seed);
+});
 $('#shareWorld').addEventListener('click',async()=>{
  const link=window.location.origin+window.location.pathname+
   recipeQuery({seed,style:buildingStyle,program:buildingProgram},
@@ -256,7 +278,10 @@ function useSelected(){
  }
  if(result.pose==='enter')controller.startPose(result.value);
  else if(result.pose==='exit')controller.endPose();
- else if(result.item)world?.setInteractionState(result.item,result.on);
+ else if(result.item){
+  world?.setInteractionState(result.item,result.on);
+  writeWorldState();
+ }
  drawMap();
  updateActionTarget();
 }
