@@ -29,7 +29,7 @@ for(const category of PROGRAM_CATEGORIES){
  }
  buildingUse.append(group);
 }
-buildingUse.value=buildingProgram;
+buildingUse.value='family_house';
 initPanels({
  settingsPanel:$('#settingsPanel'),mapPanel:$('#mapPanel'),
  settingsToggle:$('#toggleSettings'),mapToggle:$('#toggleMap'),
