@@ -123,39 +123,67 @@ function topologicalGrid(rng,style){
   const x=c.gx+dx,z=c.gz+dz;
   return inside(x,z)&&grid[idx(x,z)]===HALL;
  }));
- function trySplit(cells){
+ // Compact, entirely orthogonal room grammar. Every rectangular bounding box
+ // must have an aspect ratio <= 5:3. The old size-only splitter made 2x8
+ // bedrooms; a small room with an internal connecting door is preferable.
+ const ROOM_RATIO=5/3, MAX_ROOM_CELLS=30;
+ const geom=(cells)=>{
   const xs=cells.map(c=>c.gx),zs=cells.map(c=>c.gz);
-  const rangeX=Math.max(...xs)-Math.min(...xs),rangeZ=Math.max(...zs)-Math.min(...zs);
+  const width=Math.max(...xs)-Math.min(...xs)+1,
+        depth=Math.max(...zs)-Math.min(...zs)+1;
+  return {width,depth,ratio:Math.max(width,depth)/Math.min(width,depth),
+   fill:cells.length/(width*depth)};
+ };
+ const qualifies=cells=>{
+  const g=geom(cells);
+  return g.ratio<=ROOM_RATIO+1e-9&&cells.length<=MAX_ROOM_CELLS;
+ };
+ function trySplit(cells){
+  const g=geom(cells);
+  const axes=g.width>=g.depth?['gx','gz']:['gz','gx'];
   const options=[];
-  for(const axis of (rangeX>rangeZ?['gx','gz']:['gz','gx'])){
-   const values=cells.map(c=>c[axis]),a=Math.min(...values),b=Math.max(...values);
-   for(let cut=a+1;cut<b;cut++){
-    const left=cells.filter(c=>c[axis]<=cut),right=cells.filter(c=>c[axis]>cut);
-    if(Math.min(left.length,right.length)<10 || !hasDoor(left)||!hasDoor(right))continue;
+  for(const axis of axes){
+   const vs=cells.map(c=>c[axis]),a=Math.min(...vs),b=Math.max(...vs);
+   for(let cut=a;cut<b;cut++){
+    const left=cells.filter(c=>c[axis]<=cut),
+          right=cells.filter(c=>c[axis]>cut);
+    if(Math.min(left.length,right.length)<4)continue;
     if(!connected(left)||!connected(right))continue;
-    // Balance room sizes and prefer to avoid skinny one-cell strips.
-    const sizeBias=Math.abs(left.length-right.length)*.06;
-    const widthPenalty=Math.max(0,2-(cut-a))*1.2+Math.max(0,2-(b-cut))*1.2;
-    options.push({left,right,score:sizeBias+widthPenalty+rng()*.1});
+    const l=geom(left),r=geom(right);
+    // Never create a one-cell-wide room or a wall-less diagonal parcel.
+    if(Math.min(l.width,l.depth,r.width,r.depth)<2)continue;
+    const over=x=>Math.max(0,x.ratio-ROOM_RATIO);
+    const score=14*(over(l)+over(r))
+      +.065*(Math.max(0,left.length-MAX_ROOM_CELLS)+
+              Math.max(0,right.length-MAX_ROOM_CELLS))
+      +.028*Math.abs(left.length-right.length)
+      +1.9*((1-l.fill)+(1-r.fill))
+      +(hasDoor(left)&&hasDoor(right)?-1.1:0)
+      +rng()*.0001;
+    options.push({left,right,score});
    }
   }
   options.sort((a,b)=>a.score-b.score);
   return options[0]||null;
  }
  let roomsCells=components;
- for(let attempt=0;attempt<36;attempt++){
-  const eligible=roomsCells.map((cells,index)=>({cells,index}))
-   .filter(o=>o.cells.length>cfg.maxRoomCells && roomsCells.length<cfg.targetRooms+5)
-   .sort((a,b)=>b.cells.length-a.cells.length);
-  if(!eligible.length && roomsCells.length>=cfg.targetRooms)break;
-  const option=(eligible.length?eligible:roomsCells.map((cells,index)=>({cells,index}))
-      .filter(x=>x.cells.length>=18).sort((a,b)=>b.cells.length-a.cells.length))
-    .map(entry=>({...entry,split:trySplit(entry.cells)}))
-    .find(entry=>entry.split);
-  if(!option)break;
-  roomsCells.splice(option.index,1,option.split.left,option.split.right);
+ for(let attempt=0;attempt<100;attempt++){
+  const eligible=roomsCells.map((cells,index)=>({cells,index,g:geom(cells)}))
+    .filter(o=>!qualifies(o.cells))
+    .sort((a,b)=>Math.max(0,b.g.ratio-ROOM_RATIO)*20+b.cells.length*.04-
+       (Math.max(0,a.g.ratio-ROOM_RATIO)*20+a.cells.length*.04));
+  if(!eligible.length)break;
+  if(roomsCells.length>=65)throw Error('Excessive subdivision in '+style);
+  const candidate=eligible.map(o=>({...o,split:trySplit(o.cells)}))
+    .find(o=>o.split);
+  if(!candidate)break; // asserted below with a diagnostic
+  roomsCells.splice(candidate.index,1,candidate.split.left,candidate.split.right);
  }
- if(roomsCells.length<5||roomsCells.length>22)throw Error('Building grammar produced invalid room count');
+ const unresolved=roomsCells.filter(c=>!qualifies(c));
+ if(unresolved.length)throw Error('Cannot form 5:3 room without disconnecting parcels in '+style+
+   ': '+unresolved.map(c=>JSON.stringify(geom(c))).join(', '));
+ if(roomsCells.length<5||roomsCells.length>65)
+  throw Error('Building grammar produced invalid room count: '+roomsCells.length);
  // Assign wide, furniture-heavy functions to naturally spacious parcels.
  // Purely shuffling room labels can put a dining table into a narrow L-shaped
  // passage even when an adjacent room is much more suitable.
@@ -245,63 +273,15 @@ function wallsFromGrid(grid,doors){
  }
  return out;
 }
-function bevelCorners(grid,rooms,doors,walls,rng){
- const out=[],used=new Set(),doorKeys=new Set(doors.map(d=>d.edgeKey));
- const near=(a,b)=>Math.abs(a-b)<.002;
- for(const room of shuffle(rooms,rng)){
-  const eligible=[];
-  for(const c of room.cells)for(const sx of [-1,1])for(const sz of [-1,1]){
-   const aX=c.gx+sx,aZ=c.gz+sz;
-   if(!inside(aX,c.gz)||!inside(c.gx,aZ))continue;
-   const nX=grid[idx(aX,c.gz)],nZ=grid[idx(c.gx,aZ)];
-   if(nX===room.id||nZ===room.id)continue;
-   if(doorKeys.has(edgeKey(c.gx,c.gz,sx,0))||
-      doorKeys.has(edgeKey(c.gx,c.gz,0,sz)))continue;
-   const wx=c.x+sx*TILE/2,wz=c.z+sz*TILE/2;
-   const wallX=walls.findIndex((w,i)=>!used.has(i)&&w.kind==='wall'&&
-     near(w.x,wx)&&near(w.z,c.z)&&near(w.w,WALL_THICKNESS)&&near(w.d,TILE));
-   const wallZ=walls.findIndex((w,i)=>!used.has(i)&&w.kind==='wall'&&
-     near(w.x,c.x)&&near(w.z,wz)&&near(w.w,TILE)&&near(w.d,WALL_THICKNESS));
-   if(wallX<0||wallZ<0)continue;
-   const quality=(nX===OUTSIDE?3:0)+(nZ===OUTSIDE?3:0)+rng()*.8;
-   eligible.push({c,sx,sz,wallX,wallZ,quality});
-  }
-  eligible.sort((a,b)=>b.quality-a.quality);
-  const pick=eligible[0];
-  if(!pick)continue;
-  const {c,sx,sz,wallX,wallZ}=pick;
-  if(used.has(wallX)||used.has(wallZ))continue;
-  const cut=.62;
-  walls[wallX].z-=sz*cut/2;walls[wallX].d-=cut;
-  walls[wallZ].x-=sx*cut/2;walls[wallZ].w-=cut;
-  used.add(wallX);used.add(wallZ);
-  const cornerX=c.x+sx*TILE/2,cornerZ=c.z+sz*TILE/2;
-  const ax=cornerX-sx*cut,az=cornerZ;
-  const bx=cornerX,bz=cornerZ-sz*cut;
-  const angle=-Math.atan2(bz-az,bx-ax);
-  walls.push({x:(ax+bx)/2,z:(az+bz)/2,w:cut*Math.SQRT2,d:WALL_THICKNESS,
-    height:WALL_HEIGHT,y:.10+WALL_HEIGHT/2,kind:'diagonal',
-    angle,ax,az,bx,bz});
-  out.push({roomId:room.id,cornerX,cornerZ,ax,az,bx,bz,cut,angle});
- }
- return out;
-}
 function pointBoxDistance(x,z,o){
  const cx=clamp(x,o.x-o.w/2,o.x+o.w/2),
        cz=clamp(z,o.z-o.d/2,o.z+o.d/2);
  return Math.hypot(x-cx,z-cz);
 }
-function segmentDistance(x,z,o){
- const vx=o.bx-o.ax,vz=o.bz-o.az,den=vx*vx+vz*vz;
- const t=clamp(((x-o.ax)*vx+(z-o.az)*vz)/(den||1),0,1);
- return Math.hypot(x-o.ax-t*vx,z-o.az-t*vz);
-}
 export function isWalkable(layout,x,z,radius=.29){
  const {gx,gz}=worldCell(x,z);
  if(!inside(gx,gz)||layout.grid[idx(gx,gz)]===OUTSIDE)return false;
- return !(layout.obstacles||[]).some(o=>o.kind==='diagonal'?
-   segmentDistance(x,z,o)<radius+WALL_THICKNESS/2 :
-   pointBoxDistance(x,z,o)<radius);
+ return !(layout.obstacles||[]).some(o=>pointBoxDistance(x,z,o)<radius);
 }
 export function generateTopology(seed='vitae-001',requestedType='auto'){
  const rng=seededRandom(String(seed)+'::architecture');
@@ -310,7 +290,7 @@ export function generateTopology(seed='vitae-001',requestedType='auto'){
  const {grid,rooms,atrium,footprint}=topologicalGrid(rng,style);
  const doors=chooseDoors(grid,rooms,rng);
  const walls=wallsFromGrid(grid,doors);
- const chamfers=bevelCorners(grid,rooms,doors,walls,rng);
+ const chamfers=[]; // Orthogonal walls only; no diagonal corner cuts.
  const floors=[];
  for(let z=0;z<GRID_H;z++)for(let x=0;x<GRID_W;x++){
   const roomId=grid[idx(x,z)];
@@ -319,7 +299,7 @@ export function generateTopology(seed='vitae-001',requestedType='auto'){
  const hall=floors.filter(c=>c.roomId===HALL);
  const center=hall.reduce((a,c)=>!a||Math.hypot(c.x,c.z)<Math.hypot(a.x,a.z)?c:a,null);
  const layout={seed:String(seed),grid,rooms,doors,walls,chamfers,floors,
-  props:[],obstacles:walls.filter(w=>w.kind==='wall'||w.kind==='diagonal').map(w=>({...w})),
+  props:[],obstacles:walls.filter(w=>w.kind==='wall').map(w=>({...w})),
   tile:TILE,buildingType:style,buildingName:BUILDING_TYPES[style].name,
   footprint,atrium,
   spawn:{x:center.x,z:center.z},bounds:{
