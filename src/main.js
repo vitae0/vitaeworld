@@ -131,14 +131,16 @@ function updateActionTarget(){
   chosen.label+': '+interactions.actionName(chosen));
  worldTarget.set(chosen.x,chosen.y+Math.min(.33,chosen.h*.15),chosen.z);
  worldTarget.project(camera);
- if(worldTarget.z>=1||worldTarget.z<=-1){
+ const poseActive=interactions.activePose?.id===chosen.id;
+ const behind=worldTarget.z>=1||worldTarget.z<=-1;
+ if(behind&&!poseActive){
   objectAnchor.hidden=true;return;
  }
  // Reposition a real DOM control at the projected world-space object,
  // rather than making the user guess which nearby item a generic UI uses.
  const width=window.innerWidth,height=window.innerHeight;
- const x=(worldTarget.x*.5+.5)*width;
- const y=(-worldTarget.y*.5+.5)*height;
+ const x=behind?width*.5:(worldTarget.x*.5+.5)*width;
+ const y=behind?height*.65:(-worldTarget.y*.5+.5)*height;
  if(x<0||x>width||y<0||y>height){
   if(!interactions.activePose){
    objectAnchor.hidden=true;return;
