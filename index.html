@@ -14,7 +14,7 @@
   <header class="topbar">
    <div class="brand">
     <div class="emblem"><span>V</span></div>
-    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 18</small></div>
+    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 19</small></div>
    </div>
    <nav class="topControls" aria-label="Arayüz panelleri">
     <button id="toggleSettings" class="panelToggle" type="button" aria-controls="settingsPanel" aria-expanded="true">☷ <span>AYARLAR</span></button>
@@ -29,7 +29,7 @@
     <div class="paneHeader"><span>WORLD SETTINGS</span><button id="closeSettings" class="paneClose" type="button" aria-label="Ayarlar panelini kapat">×</button></div>
     <div class="eyebrow">INTERIOR GENERATOR <span>COMPOSITION / DRESSING</span></div>
     <h1>Spaces with<br><em>some personality.</em></h1>
-    <p class="intro">Daha kompakt odalar, uyumlu mobilya grupları, duvar sanatı, raflar, sıcak ışıklar ve çakışmasız dekorasyon.</p>
+    <p class="intro">İşlevsel odalar, bütünlüklü mimari kaplamalar, etkileşimli mobilyalar ve otomatik kalite ayarı.</p>
     <label class="formLabel" for="seed">WORLD SEED</label>
     <div class="seedRow">
      <input id="seed" spellcheck="false" autocomplete="off" value="vitae-001">
@@ -65,6 +65,18 @@
      <div><small>LAYOUT</small><strong id="layoutStatus" class="layoutValue">LOOPS</strong></div>
     </div>
     <div id="styleStatistics" class="styleStatistics">TÜM KATLAR AÇIK</div>
+    <div class="interiorAudit" role="status" aria-live="polite">
+      <span>İÇ MEKÂN KONTROLÜ</span>
+      <strong id="interiorQuality">HESAPLANIYOR</strong>
+    </div>
+    <label for="performanceMode" class="formLabel">GÖRÜNTÜ KALİTESİ</label>
+    <select id="performanceMode" aria-label="Görüntü performans modu">
+      <option value="auto">OTOMATİK · FPS ODAKLI</option>
+      <option value="economy">EKONOMİ · MOBİL</option>
+      <option value="balanced">DENGELİ</option>
+      <option value="cinematic">GÖRSEL · YÜKSEK DETAY</option>
+    </select>
+    <div id="performanceInfo" class="performanceInfo">CİHAZA UYGUN GÖRÜNTÜ</div>
     <div class="eyebrow sectionEyebrow">ENVIRONMENT</div>
     <div class="daylightPanel">
       <label for="dayTime" class="formLabel">GÜN / GECE <output id="dayTimeValue" for="dayTime">14:00</output></label>
