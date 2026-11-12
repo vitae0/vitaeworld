@@ -116,3 +116,18 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
   oluşturuluyor. Merdiven boşluğunun döşeme kenarlarında ince çerçeve var.
 - Sonraki kontrol: Gerçek mobil tarayıcıda tavan/merdiven görüntüsü
   ve farklı bina planlarında mobilyaların elle görsel incelenmesi.
+
+## Lab 17 (12 Kasım 2026): büyük deterministik güncelleme
+
+- 81 mobilya + 3 armatür + 2 karakter GLB'sinin yayınlama sırasında
+  oyunun kendi statik dosyalarına alınması, SHA-256 kaynak manifesti ve
+  her dosya için glTF bütünlük kontrolü.
+- Tarayıcıda 6 paralel model yükleme sınırı, ortak önbellek, yeniden
+  deneme, tanılama ekranı, görsel yedekler ve model tekrar yükleme.
+- Klasik yerleştirme korunarak masa-sandalye dağılımı, mutfak çalışma
+  üçgeni, koltuk/TV grubu ve yatak başı sehpası ilişkileri geliştirildi.
+- Seed + bina programı + mimari ile birebir tekrar üretilebilen URL.
+- Aynı dünyadaki kapı ve cihaz durumlarının yerel saklanması ve
+  kullanıcı tarafından sıfırlanması.
+- Hâlâ açık: farklı cihazlarda yükleme doğrulaması, gerçek FPS,
+  tam karakter IK ve otomatik sanat kalitesi değerlendirmesi.
