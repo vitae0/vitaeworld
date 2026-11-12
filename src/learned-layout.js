@@ -2,7 +2,7 @@
 // Parameters are fitted from CC BY 4.0 FloorplanQA-Layouts via
 // scripts/train-layout-priors.py and shipped as a small, auditable JSON.
 // Never bypasses candidate geometry, door clearance or collision rules.
-import model from '../model/layout-priors.json';
+import model from '../model/layout-priors.json' with {type:'json'};
 
 const ROOM_MAP=Object.freeze({
  suite:'bedroom',lounge:'living_room',games:'living_room',kitchen:'kitchen'
