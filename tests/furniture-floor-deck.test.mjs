@@ -1,8 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {floorVisibilityPlan} from '../src/floor-visibility.js';
-import {blocksWindow} from '../src/placement-constraints.js';
-import {generateLayout,BUILDING_TYPE_IDS} from '../src/layout.js';
+import {floorVisibilityPlan,renderedDeckCells,visibleCeilingCells,stairwellRimSegments} from '../src/floor-visibility.js';
+import {blocksWindow,furnitureUseFrontage} from '../src/placement-constraints.js';
+import {generateLayout,BUILDING_TYPE_IDS,GRID_W,GRID_H,worldCell} from '../src/layout.js';
 import {generateBuilding} from '../src/building.js';
 import {collisionPairs,roomAccessibility} from '../src/interior-quality.js';
 
@@ -57,7 +57,7 @@ test('window blockers affect tall furniture, not low desks or sofas',()=>{
 for(const style of BUILDING_TYPE_IDS){
  test('classic semantic rules remain safe after ML score rollback: '+style,()=>{
   const layout=generateLayout('classic-placement-'+style,style);
-  assert.equal(layout.placementMethod,'semantic-rules-v2');
+  assert.equal(layout.placementMethod,'semantic-rules-v2-access');
   assert.deepEqual(collisionPairs(layout.props),[]);
   assert.equal(layout.qualityReport.collisions.length,0);
   for(const room of layout.rooms){
@@ -75,3 +75,46 @@ for(const style of BUILDING_TYPE_IDS){
   }
  });
 }
+
+test('upper slab replaces the overlapping lower ceiling, without leaving holes elsewhere',()=>{
+ for(const style of BUILDING_TYPE_IDS){
+  const building=generateBuilding('roof-cover-'+style,style,2);
+  const lower=building.stories[0].layout,upper=building.stories[1].layout;
+  const actualDeck=renderedDeckCells(upper);
+  const roof=visibleCeilingCells(lower,upper);
+  const key=c=>c.gz*GRID_W+c.gx;
+  const deckKeys=new Set(actualDeck.map(key));
+  assert.ok(actualDeck.length>0);
+  assert.ok(roof.every(c=>!deckKeys.has(key(c))),style+
+   ': lower roof hides the actual upper floor from below');
+  assert.ok(roof.every(c=>!lower.ceilingHoles?.has(key(c))));
+  const originalCeiling=visibleCeilingCells(lower,null);
+  assert.ok(originalCeiling.length>=roof.length);
+  assert.ok(originalCeiling.length>roof.length,
+   style+': duplicated ceiling should be removed where the upper slab exists');
+  const rim=stairwellRimSegments(upper);
+  assert.ok(rim.length>0,'upper stairwell needs a structural edge rim');
+  assert.ok(rim.every(p=>p.w>0&&p.d>0));
+  assert.deepEqual(stairwellRimSegments(lower),[],
+   'ground floor must not get a floating stairwell rim');
+ }
+});
+test('local furniture access distinguishes clear facing, blocked facing and chair backs',()=>{
+ const grid=new Int16Array(GRID_W*GRID_H).fill(-1);
+ for(let gz=6;gz<=12;gz++)for(let gx=9;gx<=15;gx++){
+  grid[gz*GRID_W+gx]=7;
+ }
+ const room={id:7},layout={grid};
+ const p={x:0,z:0,w:.82,d:.76,angle:0};
+ const cabinet={role:'storage',solid:true};
+ const free=furnitureUseFrontage(layout,room,cabinet,p,[]);
+ assert.ok(free>.8);
+ const obstacle={x:0,z:-.90,w:1.12,d:.60,solid:true,role:'desk'};
+ const blocked=furnitureUseFrontage(layout,room,cabinet,p,[obstacle]);
+ assert.ok(blocked<free,'approach clearance must reject obstructed front');
+ assert.equal(furnitureUseFrontage(layout,room,
+  {role:'rug',solid:false},p,[obstacle]),0);
+ const chair={role:'diningChair',solid:true};
+ assert.ok(furnitureUseFrontage(layout,room,chair,p,[obstacle])>.8,
+  'dining chair must be approachable from behind, not table-facing front');
+});
