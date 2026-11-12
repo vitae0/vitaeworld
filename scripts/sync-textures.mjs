@@ -6,9 +6,9 @@ import {mkdir,writeFile,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 
-const ASSETS=['white_plaster_02','wood_planks','tiled_floor_001'];
+const ASSETS=['white_plaster_02','wood_planks','tiled_floor_001','fabric_pattern_05'];
 const KINDS=[
- {name:'Diffuse',aliases:['diffuse','col','albedo','basecolor']},
+ {name:'Diffuse',aliases:['diffuse','col','col_01','albedo','basecolor']},
  {name:'Normal',aliases:['nor_gl','normal_gl','normalgl']},
  {name:'Rough',aliases:['rough','roughness']}
 ];
