@@ -1,8 +1,36 @@
-# VitaeWorld | Architecture Lab 10
+# VitaeWorld | Architecture Lab 11
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 11 — Externally trained room-layout placement model
+
+**Actual training complete.** We downloaded the CC BY 4.0
+[FloorplanQA-Layouts](https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts)
+repository at revision `9ffb74c1c158104fa302baea8e18087d31906bcd`,
+sparse-checking out only **1,800 synthetic bedroom, living-room and kitchen
+JSON plans**. No HSSD-derived layouts were trained on, and no source
+images/JSON layouts are shipped to players.
+
+The dependency-free Python trainer `scripts/train-layout-priors.py`
+fitted **16 conditional 2D Gaussian mixtures** for common room/object
+categories: 1,447 training rooms, 353 held-out rooms, 6,359 training
+objects, and 1,521 held-out objects. Held-out mean log density is
+**+0.07492** compared with 0 for a uniform unit-square baseline. This
+is modest evidence of predictive structure, **not** a player-preference
+study or proof of superior aesthetic layout.
+
+`model/layout-priors.json` is the checked-in trained parameter file,
+`model/layout-metrics.json` reports the holdout results, and
+`src/learned-layout.js` applies only a bounded **-0.22 to +0.24**
+candidate-placement bias. All existing door, obstacle, boundary,
+accessibility, and 5:3 room rules remain authoritative.
+
+The first model learns **where furniture tends to go within a room**.
+It does not generate building graphs, infer 3D meshes or predict correct
+furniture front directions. The V0.2–V0.4 active development priorities
+are documented in [ROADMAP](docs/ROADMAP_V02_V04.md).
 
 ## Architecture selection
 
@@ -22,7 +50,7 @@ The floor plan uses a 25×19 occupancy grid of 1.26m cells. Room splitting valid
 
 ## Furniture orientation, not just position
 
-61 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
+81 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
 
