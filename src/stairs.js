@@ -14,7 +14,10 @@ export function chooseStaircase(stories){
  for(let z=0;z<GRID_H;z++)for(let x=0;x<GRID_W;x++)
  for(const [dx,dz] of directions){
   const cells=Array.from({length:7},(_,i)=>({gx:x+dx*i,gz:z+dz*i}));
-  if(!cells.every(c=>inside(c.gx,c.gz)&&
+  // Keep at least one normal corridor cell before the first step and
+  // beyond the upper landing, so the flight does not terminate at a wall.
+  const approaches=[{gx:x-dx,gz:z-dz},{gx:x+7*dx,gz:z+7*dz}];
+  if(![...cells,...approaches].every(c=>inside(c.gx,c.gz)&&
    base.grid[key(c.gx,c.gz)]===HALL&&upper.grid[key(c.gx,c.gz)]===HALL))continue;
   const start=cellWorld(x,z),end=cellWorld(x+6*dx,z+6*dz);
   const mid=cellWorld(x+3*dx,z+3*dz);
