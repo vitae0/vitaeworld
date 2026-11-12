@@ -68,3 +68,15 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
   güvenlik testlerinden sonra değerlendirilir.
 - Hazır model seçimi görsel olarak doğrulanana kadar yönü
   ölçüldü/kanıtlandı diye sunulmaz.
+
+## Lab 13 (12 Kasım 2026) ilerleme
+
+- 36 bina kullanım programı ve 8 farklı plan grameri.
+- İç/dış kapılarda gerçek, kesintisiz kapı üstü duvarı.
+- Tuvalet-banyo ve servis alanlarında cam bulunmayan opak kapılar;
+  başka odalarda seed üzerinden seçilen gerçek camlı/buzlu camlı kapılar.
+- Dış kapı görsel olarak var fakat bilinçli şekilde kilitli ve
+  etkileşim dışı.
+- Yeni CC0 duvar, taş, laminat ve terakota doku aileleri.
+- Gelecek işler: pencereler, cephe detayları, eğitimli plan
+  varyantlarının kör estetik karşılaştırması, model bazlı animasyon/IK.

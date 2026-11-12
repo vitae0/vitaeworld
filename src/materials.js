@@ -4,7 +4,10 @@ import * as THREE from 'three';
 // Poly Haven maps downloaded by scripts/sync-textures.mjs replace it.
 // Small source bitmaps and no displacement maps keep mobile memory bounded.
 const ASSET={plaster:'white_plaster_02',wood:'wood_planks',
- tile:'tiled_floor_001',fabric:'fabric_pattern_05'};
+ tile:'tiled_floor_001',fabric:'fabric_pattern_05',
+ oak:'laminate_floor_02',marble:'marble_tiles',
+ terracotta:'terracotta_floor_tiles',brick:'brick_wall_07',
+ paintedPlaster:'painted_plaster_wall',concrete:'concrete_floor'};
 let manifestPromise;
 function manifest(){
  if(!manifestPromise){
@@ -23,11 +26,26 @@ function fallbackMap(kind){
  for(let y=0;y<256;y++)for(let x=0;x<256;x++){
   const n=hash(x>>1,y>>1)*13-6.5;
   let r,g,b;
-  if(kind==='wood'){
+  if(kind==='wood'||kind==='oak'){
    const plank=Math.floor(y/48),grain=(Math.sin(x*.12+Math.sin(y*.06)*2)+Math.sin(x*.33+y*.11))*.5;
    const groove=y%48<=2||x%256<2&&plank%2===0?-45:0;
    const shade=grain*9+n+groove+(plank%2?7:-7);
    r=166+shade;g=125+shade*.9;b=86+shade*.55;
+  }else if(kind==='brick'){
+   const stagger=(Math.floor(y/36)%2)*35;
+   const mortar=((y%36)<3||((x+stagger)%94)<3)?-74:0;
+   const shade=n+mortar;
+   r=160+shade;g=81+shade;b=63+shade;
+  }else if(kind==='concrete'){
+   const shade=n*1.7;
+   r=159+shade;g=158+shade;b=150+shade;
+  }else if(kind==='terracotta'){
+   const mortar=(x%64<3||y%64<3)?-61:0;
+   r=173+n+mortar;g=114+n+mortar;b=80+n+mortar;
+  }else if(kind==='marble'){
+   const grout=(x%64<2||y%64<2)?-37:0;
+   const vein=Math.sin(x*.09+Math.sin(y*.11)*3)>.985?-28:0;
+   r=226+n+grout+vein;g=218+n+grout+vein;b=204+n+grout+vein;
   }else if(kind==='tile'){
    const grout=(x%64<3||y%64<3)?-60:0,shade=n*.64+grout;
    r=210+shade;g=206+shade;b=190+shade;

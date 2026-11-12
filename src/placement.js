@@ -378,6 +378,12 @@ export function populateRooms(layout,seed=layout.seed){
  layout.orientationReport=polishFurnitureOrientations(layout);
  layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
    ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
+ // Rotating a chair slightly changes the reachable grid. Store FINAL
+ // accessibility, not an out-of-date value from before orientation QA.
+ for(const room of layout.rooms){
+  const props=layout.props.filter(p=>p.roomId===room.id);
+  room.accessibility=+roomAccessibility(layout,room,props).ratio.toFixed(3);
+ }
  layout.qualityReport={collisions:collisionPairs(layout.props),
    accessibleRooms:layout.rooms.filter(r=>r.accessibility>=.82).length,
    roomCount:layout.rooms.length};

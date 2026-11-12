@@ -2,10 +2,12 @@
 // spines, additional cross-links, central courtyard ring, 16 compact room parcels.
 // All world/physics data is independent from Three.js.
 import {ROOM_TYPES} from './semantics.js';
+import {selectProgramRoomTypes} from './building-programs.js';
 
 export const TILE=1.26, GRID_W=25, GRID_H=19, WALL_HEIGHT=3.25;
 export const HALL=0, OUTSIDE=-1;
-const DOOR_WIDTH=1.10, WALL_THICKNESS=.13;
+export const DOOR_WIDTH=1.10, DOOR_HEIGHT=2.38;
+const WALL_THICKNESS=.13;
 const DIRS=[{dx:1,dz:0},{dx:-1,dz:0},{dx:0,dz:1},{dx:0,dz:-1}];
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 const idx=(x,z)=>z*GRID_W+x;
@@ -47,10 +49,13 @@ export const BUILDING_TYPES=Object.freeze({
  central:{name:'Central Atrium',description:'Large shared centre and radial circulation',targetRooms:14,maxRoomCells:24},
  grid:{name:'Urban Grid',description:'Regular intersecting streets and corridors',targetRooms:18,maxRoomCells:23},
  courtyard:{name:'Courtyard Loop',description:'Rings around an open-air courtyard',targetRooms:17,maxRoomCells:23},
- branched:{name:'Connected Wings',description:'Short side wings with a connected spine',targetRooms:14,maxRoomCells:24}
+ branched:{name:'Connected Wings',description:'Short side wings with a connected spine',targetRooms:14,maxRoomCells:24},
+ rowhouse:{name:'Narrow Rowhouse',description:'Narrow frontage, long rooms and a compact corridor spine',targetRooms:10,maxRoomCells:23},
+ loft:{name:'Industrial Loft',description:'Perimeter galleries and open central studio zones',targetRooms:11,maxRoomCells:30},
+ villa:{name:'Villa with Galleries',description:'Central living hall and side galleries',targetRooms:15,maxRoomCells:24}
 });
 export const BUILDING_TYPE_IDS=Object.freeze(Object.keys(BUILDING_TYPES));
-function topologicalGrid(rng,style){
+function topologicalGrid(rng,style,program=null){
  const grid=new Array(GRID_W*GRID_H).fill(OUTSIDE);
  const hall=(x,z)=>{if(inside(x,z))grid[idx(x,z)]=HALL;};
  const fillRect=(x0,x1,z0,z1,fn=hall)=>{
@@ -84,6 +89,23 @@ function topologicalGrid(rng,style){
   fillRect(x0,x1,8,9);
   fillRect(6,7,3,14);fillRect(16,17,3,14);
   fillRect(7,16,3,4);fillRect(7,16,13,14);
+ }else if(style==='rowhouse'){
+  // Narrow street front, deep parcels and a single cross-hall.
+  x0=6;x1=18;z0=1;z1=17;
+  fillRect(11,12,z0,z1);fillRect(x0,x1,8,9);
+ }else if(style==='loft'){
+  x0=2;x1=22;z0=4;z1=14;
+  fillRect(x0,x1,4,5);fillRect(x0,x1,13,14);
+  fillRect(2,3,5,13);fillRect(21,22,5,13);
+  fillRect(11,12,5,13);
+  atrium={x:0,z:0,kind:'studio-hall'};
+ }else if(style==='villa'){
+  x0=2;x1=22;z0=2;z1=16;
+  fillRect(10,12,z0,z1);
+  fillRect(x0,x1,8,9);
+  fillRect(7,15,6,7);
+  fillRect(7,15,10,11);
+  atrium={x:0,z:0,kind:'lobby'};
  }
  // Each component not already circulation is a room candidate.
  // Subdivide oversized bays only when BOTH resulting rooms can open on a corridor.
@@ -189,8 +211,11 @@ function topologicalGrid(rng,style){
  // Assign wide, furniture-heavy functions to naturally spacious parcels.
  // Purely shuffling room labels can put a dining table into a narrow L-shaped
  // passage even when an adjacent room is much more suitable.
- const chosen=shuffle(Object.keys(ROOM_TYPES).filter(key=>!ROOM_TYPES[key].circulation&&!ROOM_TYPES[key].micro),rng),rooms=[];
- const selected=Array.from({length:roomsCells.length},(_,i)=>chosen[i%chosen.length]);
+ const allowed=Object.keys(ROOM_TYPES).filter(key=>!ROOM_TYPES[key].circulation&&
+   (!ROOM_TYPES[key].micro||program?.weights[key]));
+ const chosen=shuffle(allowed.filter(key=>!ROOM_TYPES[key].micro),rng),rooms=[];
+ const selected=selectProgramRoomTypes(program,roomsCells.length,rng,allowed)||
+   Array.from({length:roomsCells.length},(_,i)=>chosen[i%chosen.length]);
  const demand={dining:10,lounge:9,kitchen:8,suite:7,games:6,
    studio:5,library:4,wellness:3,office:2,gallery:1,bath:0};
  const spatialRank=roomsCells.map((cells,i)=>{
@@ -271,8 +296,35 @@ function chooseDoors(grid,rooms,rng){
  }
  return doors;
 }
-function wallsFromGrid(grid,doors){
- const out=[],doorEdges=new Set(doors.map(d=>d.edgeKey));
+function chooseExteriorDoor(grid,footprint,rng){
+ const choices=[];
+ for(let gz=footprint.minGZ;gz<=footprint.maxGZ;gz++)
+ for(let gx=footprint.minGX;gx<=footprint.maxGX;gx++){
+  if(grid[idx(gx,gz)]!==HALL)continue;
+  const c=cellWorld(gx,gz);
+  for(const {dx,dz} of DIRS){
+   const nx=gx+dx,nz=gz+dz;
+   // Only the OUTER envelope counts as the external door; never the
+   // courtyard or an internal void. This door intentionally stays locked.
+   if(nx>=footprint.minGX&&nx<=footprint.maxGX&&
+      nz>=footprint.minGZ&&nz<=footprint.maxGZ)continue;
+   const score=10*(dz===1?1:0)-Math.abs(c.x)*.28-
+     Math.abs(c.z)*.065+rng()*.0001;
+   choices.push({x:c.x+dx*TILE/2,z:c.z+dz*TILE/2,
+    axis:dx?'z':'x',dx,dz,
+    cell:{gx,gz,x:c.x,z:c.z},
+    edgeKey:edgeKey(gx,gz,dx,dz),
+    locked:true,exterior:true,score});
+  }
+ }
+ choices.sort((a,b)=>b.score-a.score);
+ const winner=choices[0]||null;
+ if(!winner)throw new Error('No external entrance along the actual outer envelope');
+ return winner;
+}
+function wallsFromGrid(grid,doors,exteriorDoor){
+ const out=[],doorEdges=new Set([...doors.map(d=>d.edgeKey),
+   ...(exteriorDoor?[exteriorDoor.edgeKey]:[])]);
  function wall(x,z,w,d,kind='wall',height=WALL_HEIGHT,y=.10+height/2,angle=0){
   out.push({x,z,w,d,kind,height,y,angle});
  }
@@ -293,14 +345,30 @@ function wallsFromGrid(grid,doors){
        wall(px+(horizontal?off:0),pz+(horizontal?0:off),
             horizontal?rem:WALL_THICKNESS,horizontal?WALL_THICKNESS:rem);
      }
+     // The complete region above the door leaf is SOLID wall, not a
+     // decorative 34cm strip leaving a floating open gap.
+     const lintelHeight=WALL_HEIGHT-DOOR_HEIGHT;
      wall(px,pz,horizontal?TILE:WALL_THICKNESS,
-        horizontal?WALL_THICKNESS:TILE,'lintel',.34,
-        .10+WALL_HEIGHT-.17);
+       horizontal?WALL_THICKNESS:TILE,'lintel',lintelHeight,
+       .10+DOOR_HEIGHT+lintelHeight/2);
    }else wall(px,pz,horizontal?TILE:WALL_THICKNESS,
        horizontal?WALL_THICKNESS:TILE);
   }
  }
  return out;
+}
+// Multi-storey buildings have a single street entrance at ground level.
+// Upper floors get a complete exterior wall instead of a door leading to
+// empty air. Keep original private-room doors and all the floor plan data.
+export function sealExteriorDoor(layout){
+ if(!layout.exteriorDoor)return layout;
+ layout.exteriorDoor=null;
+ layout.walls=wallsFromGrid(layout.grid,layout.doors,null);
+ layout.obstacles=[
+  ...layout.walls.filter(w=>w.kind==='wall').map(w=>({...w})),
+  ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))
+ ];
+ return layout;
 }
 function pointBoxDistance(x,z,o){
  const cx=clamp(x,o.x-o.w/2,o.x+o.w/2),
@@ -312,13 +380,14 @@ export function isWalkable(layout,x,z,radius=.29){
  if(!inside(gx,gz)||layout.grid[idx(gx,gz)]===OUTSIDE)return false;
  return !(layout.obstacles||[]).some(o=>pointBoxDistance(x,z,o)<radius);
 }
-export function generateTopology(seed='vitae-001',requestedType='auto'){
+export function generateTopology(seed='vitae-001',requestedType='auto',program=null){
  const rng=seededRandom(String(seed)+'::architecture');
  const style=requestedType==='auto'?
   BUILDING_TYPE_IDS[Math.floor(rng()*BUILDING_TYPE_IDS.length)]:requestedType;
- const {grid,rooms,atrium,footprint}=topologicalGrid(rng,style);
+ const {grid,rooms,atrium,footprint}=topologicalGrid(rng,style,program);
  const doors=chooseDoors(grid,rooms,rng);
- const walls=wallsFromGrid(grid,doors);
+ const exteriorDoor=chooseExteriorDoor(grid,footprint,rng);
+ const walls=wallsFromGrid(grid,doors,exteriorDoor);
  const chamfers=[]; // Orthogonal walls only; no diagonal corner cuts.
  const floors=[];
  for(let z=0;z<GRID_H;z++)for(let x=0;x<GRID_W;x++){
@@ -327,9 +396,10 @@ export function generateTopology(seed='vitae-001',requestedType='auto'){
  }
  const hall=floors.filter(c=>c.roomId===HALL);
  const center=hall.reduce((a,c)=>!a||Math.hypot(c.x,c.z)<Math.hypot(a.x,a.z)?c:a,null);
- const layout={seed:String(seed),grid,rooms,doors,walls,chamfers,floors,
+ const layout={seed:String(seed),grid,rooms,doors,exteriorDoor,walls,chamfers,floors,
   props:[],obstacles:walls.filter(w=>w.kind==='wall').map(w=>({...w})),
   tile:TILE,buildingType:style,buildingName:BUILDING_TYPES[style].name,
+  buildingProgram:program||null,
   footprint,atrium,
   spawn:{x:center.x,z:center.z},bounds:{
    minX:-GRID_W*TILE/2,maxX:GRID_W*TILE/2,

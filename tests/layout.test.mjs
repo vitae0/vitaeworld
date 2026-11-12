@@ -38,7 +38,7 @@ test('rotations match -Z front and compensate imported model-native axes',()=>{
  assert.equal(modelYawCorrection('ruground','rug'),0);
 });
 test('explicitly forcing style and auto-seed selection are deterministic',()=>{
- assert.equal(BUILDING_TYPE_IDS.length,5);
+ assert.equal(BUILDING_TYPE_IDS.length,8);
  assert.deepEqual(generateLayout('same-seed','grid'),generateLayout('same-seed','grid'));
  assert.deepEqual(generateLayout('same-seed','auto'),generateLayout('same-seed','auto'));
  for(const style of BUILDING_TYPE_IDS){

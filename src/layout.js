@@ -7,11 +7,11 @@ export {TILE,GRID_W,GRID_H,WALL_HEIGHT,BUILDING_TYPES,BUILDING_TYPE_IDS,cellWorl
   isWalkable,seededRandom} from './topology.js';
 export {ROOM_NAMES,ROOM_THEMES} from './semantics.js';
 
-export function generateLayout(seed='vitae-001',type='auto'){
- const preferred=generateTopology(String(seed),type);
+export function generateLayout(seed='vitae-001',type='auto',program=null){
+ const preferred=generateTopology(String(seed),type,program);
  const options=[preferred];
  for(let n=1;n<=2;n++)options.push(
-  generateTopology(String(seed)+'::plan-'+n,preferred.buildingType));
+  generateTopology(String(seed)+'::plan-'+n,preferred.buildingType,program));
  const selected=pickBestTopology(options);
  const layout=selected.layout;
  layout.seed=String(seed);

@@ -61,3 +61,23 @@ SHA-256 checksums and records URLs in `public/textures/sources.json`.
 - Native GLB forward orientation remains a separate visual-review item.
   Companion-facing corrections never claim to infer a mesh's anatomical
   or functional forward direction from an axis-aligned bounding box.
+
+## Lab 13 additional verified CC0 Poly Haven materials
+
+The six additional assets and their attribution/source pages:
+- [Laminate Floor 02](https://polyhaven.com/a/laminate_floor_02)
+- [Marble Tiles](https://polyhaven.com/a/marble_tiles)
+- [Terracotta Floor Tiles](https://polyhaven.com/a/terracotta_floor_tiles)
+- [Brick Wall 07](https://polyhaven.com/a/brick_wall_07)
+- [Painted Plaster Wall](https://polyhaven.com/a/painted_plaster_wall)
+- [Concrete Floor](https://polyhaven.com/a/concrete_floor)
+
+All six are published under **CC0** by Poly Haven. The online
+`scripts/sync-textures.mjs` script runs in GitHub Pages/CI and records
+which 1K maps were successfully fetched. An asset missing from the
+manifest is replaced by a deterministic local procedural texture; no
+blank floor is generated.
+
+The active programme affects room-type assignment and finish family.
+External doors use opaque finishes for dwellings and glass in shop
+types, but remain **non-operational** in every programme.

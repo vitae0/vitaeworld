@@ -14,7 +14,7 @@
   <header class="topbar">
    <div class="brand">
     <div class="emblem"><span>V</span></div>
-    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 12</small></div>
+    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 13</small></div>
    </div>
    <nav class="topControls" aria-label="Arayüz panelleri">
     <button id="toggleSettings" class="panelToggle" type="button" aria-controls="settingsPanel" aria-expanded="true">☷ <span>AYARLAR</span></button>
@@ -35,6 +35,10 @@
      <input id="seed" spellcheck="false" autocomplete="off" value="vitae-001">
      <button id="random" class="iconButton" title="Rastgele seed" aria-label="Rastgele seed">⟳</button>
     </div>
+    <label class="formLabel buildingLabel" for="buildingUse">BİNA TÜRÜ · 36 SEÇENEK</label>
+    <select id="buildingUse" aria-label="Bina kullanım türü">
+      <option value="family_house">Aile evi</option>
+    </select>
     <label class="formLabel buildingLabel" for="buildingStyle">BUILDING ARCHITECTURE</label>
     <select id="buildingStyle" aria-label="Building architecture">
       <option value="auto">AUTO · SEED DECIDES</option>
@@ -43,6 +47,9 @@
       <option value="grid">GRID · URBAN FLOORPLAN</option>
       <option value="courtyard">COURTYARD · LOOPED GALLERY</option>
       <option value="branched">WINGS · CONNECTED PLAN</option>
+      <option value="rowhouse">ROWHOUSE · LONG & NARROW</option>
+      <option value="loft">LOFT · GALLERY LOOP</option>
+      <option value="villa">VILLA · CENTRAL GALLERY</option>
     </select>
     <button id="generate" class="primaryButton">↗ &nbsp; GENERATE INTERIOR</button>
     <div class="splitStats">

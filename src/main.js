@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {GRID_W,GRID_H,TILE,worldCell} from './layout.js';
 import {generateBuilding} from './building.js';
+import {BUILDING_PROGRAMS,BUILDING_PROGRAM_IDS,PROGRAM_CATEGORIES} from './building-programs.js';
 import {ROOM_TYPES} from './semantics.js';
 import {buildBuildingWorld} from './building-world.js';
 import {CHARACTERS,addCharacter} from './assets.js';
@@ -10,6 +11,25 @@ import {createInteractionSystem} from './interactions.js';
 
 const $=(selector)=>document.querySelector(selector);
 const canvas=$('#scene');
+const buildingUse=$('#buildingUse');
+buildingUse.replaceChildren();
+const categoryNames={
+ konut:'KONUTLAR',ticaret:'TİCARİ MEKÂNLAR',
+ konaklama:'OTEL VE KONAKLAMA',kamusal:'KAMUSAL / İŞ',
+ 'endüstri':'ÖZEL İŞLEVLER'
+};
+for(const category of PROGRAM_CATEGORIES){
+ const group=document.createElement('optgroup');group.label=categoryNames[category];
+ for(const id of BUILDING_PROGRAM_IDS){
+  const p=BUILDING_PROGRAMS[id];
+  if(p.category!==category)continue;
+  const option=document.createElement('option');
+  option.value=id;option.textContent=p.label;
+  group.append(option);
+ }
+ buildingUse.append(group);
+}
+buildingUse.value='family_house';
 initPanels({
  settingsPanel:$('#settingsPanel'),mapPanel:$('#mapPanel'),
  settingsToggle:$('#toggleSettings'),mapToggle:$('#toggleMap'),
@@ -27,7 +47,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x08151d);
 scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
-let seed='vitae-001',paletteIndex=0,characterIndex=0,buildingStyle='auto';
+let seed='vitae-001',paletteIndex=0,characterIndex=0,
+    buildingStyle='auto',buildingProgram='family_house';
 let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
 let interactions=null,selectedInteraction=null,interactionFrames=0;
@@ -52,7 +73,7 @@ function createAvatar(){
 }
 function generate(nextSeed){
  seed=String(nextSeed).trim()||'vitae-001';
- building=generateBuilding(seed,buildingStyle);
+ building=generateBuilding(seed,buildingStyle,2,buildingProgram);
  layout=building.stories[0].layout;shownLevel=0;
  const generation=++generationId;
  world?.dispose();
@@ -77,7 +98,7 @@ function generate(nextSeed){
  $('#floorValue').textContent='1 / '+building.stories.length;
  $('#propTotal').textContent=building.stories.reduce((n,s)=>n+s.layout.props.length+(s.layout.decorations?.length||0),0);
  $('#layoutStatus').textContent=layout.buildingType.toUpperCase();
- $('#buildingName').textContent=layout.buildingName.toUpperCase();
+ $('#buildingName').textContent=(building.programLabel+' · '+layout.buildingName).toUpperCase();
  $('#paletteName').textContent=world.paletteName.toUpperCase();
  updateProgress();
  drawMap();
@@ -96,6 +117,10 @@ function toggleView(){
 function newSeed(){
  return Math.random().toString(36).slice(2,8);
 }
+buildingUse.addEventListener('change',e=>{
+ buildingProgram=e.currentTarget.value;
+ generate(seed);
+});
 $('#buildingStyle').addEventListener('change',e=>{
  buildingStyle=e.currentTarget.value;
  generate(seed);
@@ -235,6 +260,11 @@ function drawMap(){
   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
   ctx.fillStyle='#ffe4a1';ctx.font='bold 9px system-ui';
   ctx.fillText('STAIRS',((a.x+b.x)/2),((a.y+b.y)/2)-6);
+ }
+ if(layout.exteriorDoor){
+  const entry=mapPoint(layout.exteriorDoor.x,layout.exteriorDoor.z);
+  ctx.fillStyle='#f6af8d';
+  ctx.fillRect(entry.x-3,entry.y-3,6,6);
  }
  for(const d of layout.doors){
    const p=mapPoint(d.x,d.z);
