@@ -16,10 +16,14 @@ export function auditInterior(layout,{deep=false}={}){
   windows:layout.windows?.length||0,
   doorways:layout.doors?.length||0,
   fitoutParts:layout.fitout?.pieces?.length||0,
+  signs:layout.signage?.length||0,
   wallTreatments:layout.wallFeatures?.length||0,
   blockedRooms:0,missingEssentials:0,collisions:0,
   missingLintels:0,unsafeWindows:0,badFinishGeometry:0
  };
+ if(layout.signage&&layout.signage.length!==counts.doorways)
+  issues.push({type:'signage-count-mismatch',
+   expected:counts.doorways,actual:layout.signage.length});
  const conflicts=collisionPairs(layout.props||[]);
  counts.collisions=conflicts.length;
  if(conflicts.length)issues.push({type:'furniture-collision',
