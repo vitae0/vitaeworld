@@ -1,8 +1,69 @@
-# VitaeWorld | Architecture Lab 17
+# VitaeWorld | Architecture Lab 18
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 18 — Material families, all-floor rendering and deterministic architecture polish
+
+**14 coherent design languages:** Modern, Sleek, Rusty, Industrial,
+Minimal, Warm Luxury, Scandinavian, Dark Contemporary, Boutique Hotel,
+Retro Modern, Brutalist, Coastal, Cyber Modern and Earthy. A dedicated
+`İÇ MEKÂN TASARIMI` selector overrides the seed-based default. Auto mode
+chooses a deterministic preset appropriate to the building programme.
+Style selection is included in the shared URL and local per-world
+interaction key.
+
+**26 new procedural surface families:** Polished concrete, microcement,
+dark oak, walnut, light parquet, herringbone, black marble, travertine,
+terrazzo, industrial epoxy, rusty metal, aged tile, smooth white,
+warm plaster, greige, charcoal panels, wood slats, raw concrete,
+dark brick, limewash, matte white ceiling, acoustic panels,
+dark ceiling, brushed steel, dark metal and light oak. Implemented
+locally in `src/procedural-surfaces.js` as deterministic 256×256
+repeatable textures. They supplement the 10 licensed Poly Haven
+material IDs; no new third-party texture downloads are needed.
+
+**All stories rendered:** `floorVisibilityPlan` no longer hides
+other floors. Both currently supported stories have full structural
+walls, floors, windows, doors, furniture and lighting/decor geometry
+available simultaneously. Only the *current storey* has active
+directional/ambient lights, so the same building is not illuminated
+twice. The 3D floor slabs remain independently visible and preserve
+stairwell holes; ceiling tiles are shown only in the current first
+person story. The tier system already supports `full` for the current
+and adjacent stories, `shell` for distant stories if additional
+floors are supported later. It does **not** claim that 3+ playable
+stories are implemented.
+
+**Wall treatment system:** Thin real wall-bound decorative
+panels, timber slats, wainscot and industrial rails are generated
+deterministically only over complete walls, clear of doors and
+windows. Rendered in GPU-instanced batches. They are decorative
+architectural layers and do not introduce artificial colliders,
+impossible navigation, or pretend to be transparent holes in
+opaque masonry.
+
+**12+ room composition archetypes:** Bedrooms, kitchens, lounges,
+dining areas, workspaces and other rooms choose a seeded composition
+archetype. Its preference contributes only a small finalist
+tie-break in the pre-existing collision-safe 40D semantic furniture
+placer. No learned coordinate model reactivated. Room decoration
+budgets and fixture selections now depend on the style family;
+minimal rooms retain empty visual space and rusty interiors allow
+denser dressing.
+
+**Quality reports:** Each layout carries `styleReport` with
+its room archetypes, wall treatments, decor-per-room, completed
+semantic ensembles and accessibility summaries. These checks
+supplement earlier interior, door, stair and model loading tests.
+
+**Limitations:** The currently generated buildings still have
+1–2 floors. Drawing both complete furnished floors increases rendering
+cost; unmeasured mobile FPS must not be claimed. Wall treatments
+are thin applied surfaces rather than structural half-height walls
+or genuinely cut recessed niches. No realtime global illumination
+or simulated structural glass walls have been added.
 
 ## Lab 17 — Major deterministic world and model-loading update
 
