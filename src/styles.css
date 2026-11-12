@@ -197,3 +197,24 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
 #buildingUse optgroup{color:#afddce;background:#09232d;font-weight:700}
 #buildingUse option{color:#f2fff6;background:#102734}
 @media(max-width:800px){#buildingUse{min-height:44px;font-size:12px}}
+
+/* Lab 14: single time-of-day control, no extra fullscreen menu layer. */
+.daylightPanel{margin:15px 0 12px;padding:12px 0 8px;
+ border-top:1px solid rgba(184,235,224,.18);border-bottom:1px solid rgba(184,235,224,.12)}
+.daylightPanel .formLabel{display:flex;align-items:center;justify-content:space-between;
+ gap:8px;font-weight:700}
+#dayTimeValue{font-variant-numeric:tabular-nums;color:#c5ffdb;
+ font-size:12px;letter-spacing:1px}
+.daylightRow{display:flex;align-items:center;gap:10px;margin-top:10px}
+#dayTime{width:100%;min-width:0;height:26px;padding:0;margin:0;
+ accent-color:#a8f6d6;appearance:auto;background:transparent;touch-action:pan-x}
+.daylightAuto{flex:0 0 42px;height:40px;border:1px solid rgba(158,227,215,.52);
+ background:rgba(20,54,64,.85);border-radius:9px;color:#ecfff6;
+ font-size:17px;font-weight:700}
+.daylightAuto[aria-pressed="true"]{background:rgba(66,126,110,.76);
+ border-color:#c8ffe2}
+.daylightAuto:focus-visible{outline:2px solid #b2ffda;outline-offset:2px}
+.daylightLegend{display:flex;justify-content:space-between;color:#95b5bd;
+ font-size:8px;font-weight:700;letter-spacing:1px}
+@media(max-width:800px){.daylightAuto{height:44px;flex-basis:44px}
+ #dayTime{min-height:36px}}

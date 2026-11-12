@@ -8,6 +8,7 @@ import {CHARACTERS,addCharacter} from './assets.js';
 import {Controller} from './controls.js';
 import {initPanels} from './ui-panels.js';
 import {createInteractionSystem} from './interactions.js';
+import {daylightAt,normalizeHour} from './daylight.js';
 
 const $=(selector)=>document.querySelector(selector);
 const canvas=$('#scene');
@@ -53,8 +54,41 @@ let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
 let interactions=null,selectedInteraction=null,interactionFrames=0;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
+let daylightHour=14,daylightAutomatic=false,daylightFrames=0;
 const clock=new THREE.Clock();
 let frames=0,lastFPS=0;
+const timeSlider=$('#dayTime'),timeLabel=$('#dayTimeValue'),
+ timeAuto=$('#timeAuto');
+function showTime(hour){
+ const h=normalizeHour(hour);
+ const minutes=Math.round(h*60)%1440;
+ return String(Math.floor(minutes/60)).padStart(2,'0')+':'+
+  String(minutes%60).padStart(2,'0');
+}
+function updateDaylight(){
+ const state=daylightAt(daylightHour);
+ world?.setDaylight(daylightHour);
+ scene.background.setHex(state.skyColor);
+ scene.fog.color.setHex(state.fogColor);
+ renderer.toneMappingExposure=state.exposure;
+ timeLabel.textContent=showTime(daylightHour);
+ timeSlider.value=String(daylightHour);
+}
+timeSlider.addEventListener('input',e=>{
+ daylightAutomatic=false;
+ timeAuto.setAttribute('aria-pressed','false');
+ timeAuto.textContent='▶';
+ timeAuto.setAttribute('aria-label','Gün-gece döngüsünü başlat');
+ daylightHour=Number(e.currentTarget.value);
+ updateDaylight();
+});
+timeAuto.addEventListener('click',()=>{
+ daylightAutomatic=!daylightAutomatic;
+ timeAuto.setAttribute('aria-pressed',String(daylightAutomatic));
+ timeAuto.textContent=daylightAutomatic?'Ⅱ':'▶';
+ timeAuto.setAttribute('aria-label',daylightAutomatic?
+  'Gün-gece döngüsünü durdur':'Gün-gece döngüsünü başlat');
+});
 function resize(){
  const w=window.innerWidth,h=window.innerHeight;
  camera.aspect=w/h;camera.updateProjectionMatrix();
@@ -92,6 +126,7 @@ function generate(nextSeed){
  controller.setInteractionSystem(interactions);
  world.setCurrentLevel(0);
  world.setFirstPerson(controller.mode==='first');
+ updateDaylight();
  $('#seed').value=seed;
  $('#seedText').textContent=seed.toUpperCase();
  $('#roomTotal').textContent=building.rooms.length;
@@ -304,6 +339,11 @@ function loop(){
  requestAnimationFrame(loop);
  const dt=clock.getDelta();
  if(document.hidden)return;
+ if(daylightAutomatic){
+  // Four real minutes approximately equal one simulated full day.
+  daylightHour=normalizeHour(daylightHour+dt*.10);
+  if(++daylightFrames%3===0)updateDaylight();
+ }
  controller.update(dt);
  world?.tick(dt);
  world?.setPlayerHeight(controller.position.y);

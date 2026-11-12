@@ -36,6 +36,9 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
   tick(dt){
    for(const layer of levels)if(layer.root.visible)layer.tick(dt);
   },
+  setDaylight(hour){
+   for(const layer of levels)layer.setDaylight(hour);
+  },
   setFirstPerson(value){firstPerson=Boolean(value);update();},
   dispose(){
    if(disposed)return;disposed=true;

@@ -1,8 +1,43 @@
-# VitaeWorld | Architecture Lab 13
+# VitaeWorld | Architecture Lab 14
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 14 — Real window apertures, façade finishes and controllable daylight
+
+**Real windows, not decals.** `src/topology.js` now selects seeded,
+room-aware windows along genuine exterior wall edges. Every selected
+tile-width wall is **structurally split** into two solid side piers,
+a solid lower sill and a solid wall head above a 0.84 m-wide × 1.28 m-tall
+opening. Rooms of type `bath` or `utility` get no transparent glass
+windows. Original solid door lintels and locked ground-floor entrance
+remain untouched. A separate invisible collision barrier stops the
+character walking out through windows; the glazing itself is real
+transparent geometry, not a colored plane over intact masonry.
+
+**Visible façade:** `src/window-visuals.js` builds instanced glazing,
+timber/metal frames, central mullions, projecting sills and optional
+curtains on the **interior** side. A canopy and façade accent over the
+locked street entrance vary between commercial/hospitality and homes.
+Four shared instanced batches cover the repeated windows rather than
+creating hundreds of independent mesh draw calls.
+
+**Dynamic daylight:** `src/daylight.js` computes the color of the sky,
+fog, directional sun and hemispheric ambient light from a 24-hour
+clock. The settings panel has a 00:00–24:00 time slider and a play/pause
+control for automatic cycling (approximately four real minutes per day).
+Ambient intensity, solar direction, sun color and exposure are updated
+across both floors, without costly window-specific realtime lights.
+The effect is **ambient and directional illumination**, not a fully
+shadow-casting, physically simulated global-illumination system.
+
+**Tests:** `tests/windows-daylight.test.mjs` verifies real openings,
+zero missing masonry above/below windows, no transparent bathroom
+windows, no windows occupying doors, deterministic seed placement,
+closed façade collision and consistent upper-storey generation,
+plus bounded 24-hour sunlight states. Existing 5:3 and door tests
+still run.
 
 ## Lab 13 — Functional building types, private glass-free doors and actual wall heads
 

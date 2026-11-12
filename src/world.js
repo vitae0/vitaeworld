@@ -6,6 +6,8 @@ import {addFacingDebug} from './orientation-debug.js';
 import {buildDoorVisuals} from './door-visuals.js';
 import {buildInteractivePropVisuals} from './interactive-props.js';
 import {createSurfaceMaterial} from './materials.js';
+import {addWindowVisuals} from './window-visuals.js';
+import {daylightAt} from './daylight.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -95,6 +97,9 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  wallMesh.instanceMatrix.needsUpdate=true;
  if(wallMesh.instanceColor)wallMesh.instanceColor.needsUpdate=true;
  root.add(wallMesh);
+ // Window glass uses actual openings cut from the solid exterior walls.
+ // Rendered as four instanced batches with shared low-poly trim.
+ addWindowVisuals(root,layout,owned);
  const normalWalls=layout.walls.filter(w=>w.kind==='wall');
  const trimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
  trimMesh.name='ArchitecturalBaseboards';trimMesh.frustumCulled=false;
@@ -105,9 +110,10 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  trimMesh.instanceMatrix.needsUpdate=true;root.add(trimMesh);
  // Continuous crown molding and selective dado/chair rails. All profiles
  // follow the orthogonal wall segments, including walls beside door openings.
- const crownMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
+ const crownWalls=layout.walls.filter(w=>w.kind==='wall'||w.kind==='windowHead');
+ const crownMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,crownWalls.length);
  crownMesh.name='CrownMolding';
- normalWalls.forEach((w,i)=>{
+ crownWalls.forEach((w,i)=>{
   tmp.position.set(w.x,WALL_HEIGHT-.01,w.z);tmp.rotation.set(0,0,0);
   tmp.scale.set(w.w+.065,.115,w.d+.065);tmp.updateMatrix();
   crownMesh.setMatrixAt(i,tmp.matrix);
@@ -160,6 +166,17 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  const hemi=new THREE.HemisphereLight(0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
+ function setDaylight(hour){
+  const light=daylightAt(hour);
+  hemi.intensity=light.hemisphereIntensity;
+  sun.intensity=light.sunIntensity;
+  sun.color.setHex(light.sunColor);
+  sun.position.set(light.sunPosition.x,light.sunPosition.y,light.sunPosition.z);
+  // Ceiling accents are deliberately inexpensive emissive geometry, not
+  // hundreds of new realtime lights in every room.
+  emissive.emissiveIntensity=.22+(.82*(1-light.sunlight));
+ }
+ setDaylight(14);
  const doors=buildDoorVisuals(root,layout,owned);
  const items=new THREE.Group();items.name='SemanticFurniture';root.add(items);
  const holders=new Map();
@@ -171,6 +188,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  let disposed=false;
  return {
   root,ceiling,colors:palette,paletteName:palette.name,
+  setDaylight,
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
   tick(dt){doors.update(dt);propStates.update(dt);},
   setInteractionState(item,on){
