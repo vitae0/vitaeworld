@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {ROOM_THEMES,TILE,WALL_HEIGHT,GRID_W,GRID_H} from './layout.js';
 import {addFurniture} from './assets.js';
 import {addModelledDecor} from './fixture-assets.js';
+import {addFacingDebug} from './orientation-debug.js';
 import {createSurfaceMaterial} from './materials.js';
 
 const PALETTES=[
@@ -148,6 +149,9 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  sun.position.set(-11,17,3);root.add(sun);
  const items=new THREE.Group();items.name='SemanticFurniture';root.add(items);
  for(const p of layout.props)addFurniture(items,p,owned,onAsset);
+ // Explicit opt-in diagnostic. Never show helper arrows in normal gameplay.
+ if(typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('qaFacing'))
+  addFacingDebug(root,layout,owned);
  let disposed=false;
  return {
   root,ceiling,colors:palette,paletteName:palette.name,
