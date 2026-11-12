@@ -16,6 +16,13 @@ export function addDecorVisuals(parent,decorations,owned){
  const leaf=(b,x,y,z,w,h,d,c)=>put('leaf',b,x,y,z,w,h,d,c);
  for(const item of decorations){
   const ink=item.color,paper=item.paper,accent=item.accent,green=item.leaf;
+  if(item.source==='floor'){
+   // Thin textile runner, visible but never a collision obstacle.
+   box(item,0,.012,0,item.w,.024,item.d,item.accent);
+   box(item,0,.026,0,item.w*.88,.004,item.d*.87,item.paper);
+   box(item,0,.031,0,item.w*.70,.003,item.d*.66,item.color);
+   continue;
+  }
   if(item.source==='wall'){
    if(item.kind==='art'){
     box(item,0,0,0,item.w,item.h,.058,ink);
