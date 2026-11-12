@@ -134,7 +134,7 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
 
 ## Lab 18 — Stiller, tüm katlar ve deterministic son düzenlemeler
 
-- 14 tasarım ailesi ve 26 yeni prosedürel yer, duvar, trim ve tavan
+- 14 tasarım ailesi ve 27 yeni prosedürel yer, duvar, trim ve tavan
   yüzeyi. Yeni dokular internet gerektirmeden üretilebiliyor.
 - Bina programına uygun stil varsayılanı; elle stil seçimi,
   paylaşılabilir seed URL'sinde ve yerel kayıtlarda stil kimliği.
