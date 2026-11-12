@@ -2,6 +2,7 @@ import {FURNITURE,FURNITURE_BY_ID,ROOM_TYPES,furnitureScore,LOCATION_DIMENSIONS}
 import {TILE,GRID_W,GRID_H,seededRandom,worldCell} from './topology.js';
 import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
 import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from './interior-quality.js';
+import {polishFurnitureOrientations} from './orientation-pass.js';
 
 
 // Room identity constrains optional furnishing. Shared traits such as "modern"
@@ -21,7 +22,8 @@ const ROOM_ROLE_ALLOW=Object.freeze({
  dining:new Set('diningTable diningChair lighting storage plant decoration bench rug'.split(' '))
 });
 const SURFACE_ONLY=new Set(['lampsquaretable','lamproundtable','computerscreen',
- 'laptop','computerkeyboard','kitchencoffeemachine','bathroommirror',
+ 'laptop','computerkeyboard','kitchencoffeemachine','kitchenmicrowave',
+ 'kitchenblender','toaster','bathroommirror',
  'books','radio','speakersmall']);
 
 // A 16D location vector and relational rules, independent of visual rendering.
@@ -369,6 +371,9 @@ export function populateRooms(layout,seed=layout.seed){
  // Rebuild from the repaired room collections. No stale obstacles or props
  // may survive a later removal.
  layout.props=placed.filter(p=>!p._removed);
+ layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
+   ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
+ layout.orientationReport=polishFurnitureOrientations(layout);
  layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
    ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
  layout.qualityReport={collisions:collisionPairs(layout.props),
