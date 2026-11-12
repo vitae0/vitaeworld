@@ -17,7 +17,8 @@ const FLAT_KINDS=new Set(['tray','book-stack','plate','magazine']);
 const R=(rng,values)=>values[Math.floor(rng()*values.length)];
 const isInRoom=(layout,x,z,id)=>{
  const {gx,gz}=worldCell(x,z);
- return gx>=0&&gx<GRID_W&&gz>=0&&gz<GRID_H&&layout.grid[gz*GRID_W+gx]===id;
+ return gx>=0&&gx<GRID_W&&gz>=0&&gz<GRID_H&&
+  (layout.zoneGrid||layout.grid)[gz*GRID_W+gx]===id;
 };
 function wallFaces(layout,room){
  const candidates=[];
@@ -134,6 +135,32 @@ export function generateDecorations(layout,seed=layout.seed){
      if(decorations.some(p=>p.source==='surface'&&volumeOverlap(item,p,.05)))continue;
      decorations.push(item);count++;break;
     }
+   }
+  }
+  if(room.circulation){
+   // Rugs are floor-level accents only. Keep stair shafts, doors and
+   // intersections clear, and never introduce physical hallway colliders.
+   const candidates=shuffled(room.cells,rng).filter(c=>
+    !layout.stairReservation?.has(c.gz*GRID_W+c.gx)&&
+    layout.doors.every(d=>Math.hypot(c.x-d.x,c.z-d.z)>TILE*1.45));
+   const max=Math.min(3,Math.floor(candidates.length/9));
+   const accepted=[];
+   for(const c of candidates){
+    if(accepted.length>=max)break;
+    if(accepted.some(q=>Math.hypot(q.x-c.x,q.z-c.z)<TILE*2.1))continue;
+    const kind='runner';
+    const isLongX=[[-1,0],[1,0]].every(([dx,dz])=>{
+     const gx=c.gx+dx,gz=c.gz+dz;
+     return gx>=0&&gx<GRID_W&&gz>=0&&gz<GRID_H&&
+      layout.grid[gz*GRID_W+gx]===0;
+    });
+    const spec={id:'d-'+room.id+'-'+decorations.length,
+     roomId:room.id,source:'floor',kind,x:c.x,z:c.z,y:.105,
+     w:isLongX?TILE*.82:TILE*.58,
+     d:isLongX?TILE*.58:TILE*.82,h:.018,
+     angle:0,mood:mood.name,color:mood.ink,paper:mood.paper,
+     accent:mood.accent,leaf:mood.leaf,variant:Math.floor(rng()*5)};
+    decorations.push(spec);accepted.push(spec);
    }
   }
   room.decorationCount=decorations.filter(p=>p.roomId===room.id).length;
