@@ -1,12 +1,14 @@
 import {buildWorld} from './world.js';
 import {buildStairVisuals} from './stair-visuals.js';
-import {floorVisibilityPlan} from './floor-visibility.js';
+import {floorVisibilityPlan,visibleCeilingCells} from './floor-visibility.js';
 
 // The old single-story renderer remains reusable and separately testable.
 export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{}){
- const levels=building.stories.map(story=>{
+ const levels=building.stories.map((story,i)=>{
+  const upper=building.stories[i+1]?.layout||null;
   const layer=buildWorld(scene,story.layout,paletteIndex,onAsset,{
-   detachedFloor:story.index>0
+   detachedFloor:story.index>0,
+   ceilingCells:visibleCeilingCells(story.layout,upper)
   });
   layer.root.position.y=story.elevation;
   if(layer.detachedFloor)layer.floorDeck.position.y=story.elevation;
