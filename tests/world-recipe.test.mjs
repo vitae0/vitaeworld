@@ -7,19 +7,19 @@ import {createInteractionSystem} from '../src/interactions.js';
 import {BUILDING_PROGRAM_IDS} from '../src/building-programs.js';
 
 test('URL roundtrip preserves exact deterministic building recipe',()=>{
- const input={seed:'my-world-2026',style:'villa',program:'boutique_hotel'};
+ const input={seed:'my-world-2026',style:'villa',program:'boutique_hotel',interior:'sleek'};
  assert.deepEqual(recipeFromQuery(recipeQuery(input)),input);
  assert.deepEqual(recipeFromQuery(recipeQuery(input,'?qaFacing=1')),input);
  assert.ok(recipeQuery(input,'?qaFacing=1').includes('qaFacing=1'));
- const a=generateBuilding(input.seed,input.style,2,input.program);
+ const a=generateBuilding(input.seed,input.style,2,input.program,input.interior);
  const parsed=recipeFromQuery(recipeQuery(input));
- const b=generateBuilding(parsed.seed,parsed.style,2,parsed.program);
+ const b=generateBuilding(parsed.seed,parsed.style,2,parsed.program,parsed.interior);
  assert.deepEqual(a.stories.map(s=>s.layout.props),b.stories.map(s=>s.layout.props));
  assert.deepEqual(a.stories.map(s=>s.layout.doors),b.stories.map(s=>s.layout.doors));
 });
 test('corrupt or malicious URL values cannot name invalid styles or programmes',()=>{
  const recipe=recipeFromQuery('?seed=x&style=../evil&program=unknown');
- assert.deepEqual(recipe,{seed:'x',style:'auto',program:'family_house'});
+ assert.deepEqual(recipe,{seed:'x',style:'auto',program:'family_house',interior:'auto'});
  assert.equal(normalizeRecipe({seed:'x'.repeat(200)}).seed.length,80);
  assert.equal(BUILDING_PROGRAM_IDS.length,36);
 });
