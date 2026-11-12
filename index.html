@@ -14,7 +14,7 @@
   <header class="topbar">
    <div class="brand">
     <div class="emblem"><span>V</span></div>
-    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 17</small></div>
+    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 18</small></div>
    </div>
    <nav class="topControls" aria-label="Arayüz panelleri">
     <button id="toggleSettings" class="panelToggle" type="button" aria-controls="settingsPanel" aria-expanded="true">☷ <span>AYARLAR</span></button>
@@ -39,6 +39,10 @@
     <select id="buildingUse" aria-label="Bina kullanım türü">
       <option value="family_house">Aile evi</option>
     </select>
+    <label class="formLabel buildingLabel" for="interiorStyle">İÇ MEKÂN TASARIMI · 14 STİL</label>
+    <select id="interiorStyle" aria-label="İç mekân tasarım stili">
+      <option value="auto">AUTO · BİNA TÜRÜNE UYGUN</option>
+    </select>
     <label class="formLabel buildingLabel" for="buildingStyle">BUILDING ARCHITECTURE</label>
     <select id="buildingStyle" aria-label="Building architecture">
       <option value="auto">AUTO · SEED DECIDES</option>
@@ -51,7 +55,7 @@
       <option value="loft">LOFT · GALLERY LOOP</option>
       <option value="villa">VILLA · CENTRAL GALLERY</option>
     </select>
-    <button id="generate" class="primaryButton">↗ &nbsp; GENERATE INTERIOR</button>
+    <button id="generate" class="primaryButton">↗ &nbsp; GENERATE WORLD</button>
     <button id="shareWorld" class="shareWorld" type="button" aria-label="Dünyanın paylaşılabilir bağlantısını kopyala">
       <span>↗ DÜNYA BAĞLANTISINI KOPYALA</span>
     </button>
@@ -60,6 +64,7 @@
      <div><small>OBJECTS</small><strong id="propTotal">—</strong></div>
      <div><small>LAYOUT</small><strong id="layoutStatus" class="layoutValue">LOOPS</strong></div>
     </div>
+    <div id="styleStatistics" class="styleStatistics">TÜM KATLAR AÇIK</div>
     <div class="eyebrow sectionEyebrow">ENVIRONMENT</div>
     <div class="daylightPanel">
       <label for="dayTime" class="formLabel">GÜN / GECE <output id="dayTimeValue" for="dayTime">14:00</output></label>
