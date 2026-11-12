@@ -322,8 +322,18 @@ function chooseExteriorDoor(grid,footprint,rng){
  if(!winner)throw new Error('No external entrance along the actual outer envelope');
  return winner;
 }
-function wallsFromGrid(grid,doors,exteriorDoor){
- const out=[],doorEdges=new Set([...doors.map(d=>d.edgeKey),
+const WINDOW_BOTTOM=1.02,WINDOW_HEIGHT=1.28,WINDOW_WIDTH=.84;
+function stableFraction(seed,x,z,dx,dz){
+ let h=2166136261;
+ for(const char of String(seed)+':'+x+':'+z+':'+dx+':'+dz){
+  h=Math.imul(h^char.charCodeAt(0),16777619);
+ }
+ return (h>>>0)/4294967296;
+}
+function wallsFromGrid(grid,doors,exteriorDoor,rooms=[],seed='world'){
+ const out=[],windows=[],windowBlockers=[];
+ const byRoom=new Map(rooms.map(r=>[r.id,r]));
+ const doorEdges=new Set([...doors.map(d=>d.edgeKey),
    ...(exteriorDoor?[exteriorDoor.edgeKey]:[])]);
  function wall(x,z,w,d,kind='wall',height=WALL_HEIGHT,y=.10+height/2,angle=0){
   out.push({x,z,w,d,kind,height,y,angle});
@@ -351,11 +361,47 @@ function wallsFromGrid(grid,doors,exteriorDoor){
      wall(px,pz,horizontal?TILE:WALL_THICKNESS,
        horizontal?WALL_THICKNESS:TILE,'lintel',lintelHeight,
        .10+DOOR_HEIGHT+lintelHeight/2);
+   }else if(other===OUTSIDE){
+     const room=byRoom.get(self),type=room?.type;
+     const privacy=type==='bath'||type==='utility';
+     const density=(type==='corridor'||self===HALL)?.34:
+       type==='gallery'||type==='lounge'||type==='suite'?.78:.62;
+     const shouldWindow=!privacy&&
+       stableFraction(seed,x,z,dx,dz)<density;
+     if(shouldWindow){
+      // Split ONE exterior wall into actual masonry pieces. Glass only
+      // occupies the resulting hole; it is not pasted over a solid wall.
+      const pier=(TILE-WINDOW_WIDTH)/2;
+      for(const sign of [-1,1]){
+       const offset=sign*(WINDOW_WIDTH/2+pier/2);
+       wall(px+(horizontal?offset:0),pz+(horizontal?0:offset),
+        horizontal?pier:WALL_THICKNESS,
+        horizontal?WALL_THICKNESS:pier);
+      }
+      wall(px,pz,horizontal?WINDOW_WIDTH:WALL_THICKNESS,
+       horizontal?WALL_THICKNESS:WINDOW_WIDTH,
+       'windowSill',WINDOW_BOTTOM,.10+WINDOW_BOTTOM/2);
+      const head=WALL_HEIGHT-WINDOW_BOTTOM-WINDOW_HEIGHT;
+      wall(px,pz,horizontal?WINDOW_WIDTH:WALL_THICKNESS,
+       horizontal?WALL_THICKNESS:WINDOW_WIDTH,'windowHead',
+       head,.10+WINDOW_BOTTOM+WINDOW_HEIGHT+head/2);
+      windows.push({x:px,z:pz,axis:horizontal?'x':'z',
+       dx,dz,roomId:self,width:WINDOW_WIDTH,
+       bottom:.10+WINDOW_BOTTOM,height:WINDOW_HEIGHT,
+       type:room?.type||'corridor',privacy:false});
+      // Glass does not let actors clip through the façade. A separate,
+      // invisible solid collision proxy preserves walkability tests.
+      windowBlockers.push({x:px,z:pz,
+       w:horizontal?TILE:WALL_THICKNESS,
+       d:horizontal?WALL_THICKNESS:TILE,
+       kind:'windowCollision'});
+     }else wall(px,pz,horizontal?TILE:WALL_THICKNESS,
+       horizontal?WALL_THICKNESS:TILE);
    }else wall(px,pz,horizontal?TILE:WALL_THICKNESS,
        horizontal?WALL_THICKNESS:TILE);
   }
  }
- return out;
+ return {walls:out,windows,windowBlockers};
 }
 // Multi-storey buildings have a single street entrance at ground level.
 // Upper floors get a complete exterior wall instead of a door leading to
@@ -363,9 +409,14 @@ function wallsFromGrid(grid,doors,exteriorDoor){
 export function sealExteriorDoor(layout){
  if(!layout.exteriorDoor)return layout;
  layout.exteriorDoor=null;
- layout.walls=wallsFromGrid(layout.grid,layout.doors,null);
+ const envelope=wallsFromGrid(layout.grid,layout.doors,null,
+   layout.rooms,layout.seed);
+ layout.walls=envelope.walls;
+ layout.windows=envelope.windows;
+ layout.windowBlockers=envelope.windowBlockers;
  layout.obstacles=[
   ...layout.walls.filter(w=>w.kind==='wall').map(w=>({...w})),
+  ...layout.windowBlockers,
   ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))
  ];
  return layout;
@@ -387,7 +438,8 @@ export function generateTopology(seed='vitae-001',requestedType='auto',program=n
  const {grid,rooms,atrium,footprint}=topologicalGrid(rng,style,program);
  const doors=chooseDoors(grid,rooms,rng);
  const exteriorDoor=chooseExteriorDoor(grid,footprint,rng);
- const walls=wallsFromGrid(grid,doors,exteriorDoor);
+ const envelope=wallsFromGrid(grid,doors,exteriorDoor,rooms,seed);
+ const {walls,windows,windowBlockers}=envelope;
  const chamfers=[]; // Orthogonal walls only; no diagonal corner cuts.
  const floors=[];
  for(let z=0;z<GRID_H;z++)for(let x=0;x<GRID_W;x++){
@@ -396,8 +448,10 @@ export function generateTopology(seed='vitae-001',requestedType='auto',program=n
  }
  const hall=floors.filter(c=>c.roomId===HALL);
  const center=hall.reduce((a,c)=>!a||Math.hypot(c.x,c.z)<Math.hypot(a.x,a.z)?c:a,null);
- const layout={seed:String(seed),grid,rooms,doors,exteriorDoor,walls,chamfers,floors,
-  props:[],obstacles:walls.filter(w=>w.kind==='wall').map(w=>({...w})),
+ const layout={seed:String(seed),grid,rooms,doors,exteriorDoor,walls,
+  windows,windowBlockers,chamfers,floors,
+  props:[],obstacles:[...walls.filter(w=>w.kind==='wall').map(w=>({...w})),
+   ...windowBlockers],
   tile:TILE,buildingType:style,buildingName:BUILDING_TYPES[style].name,
   buildingProgram:program||null,
   footprint,atrium,
