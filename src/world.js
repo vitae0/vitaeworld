@@ -8,6 +8,7 @@ import {buildInteractivePropVisuals} from './interactive-props.js';
 import {createSurfaceMaterial} from './materials.js';
 import {addWindowVisuals} from './window-visuals.js';
 import {daylightAt} from './daylight.js';
+import {stairwellRimSegments} from './floor-visibility.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -80,7 +81,25 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
   if(floors.instanceColor)floors.instanceColor.needsUpdate=true;
   floorDeck.add(floors);
  }
- const roofCells=layout.floors.filter(c=>!layout.ceilingHoles?.has(c.gz*GRID_W+c.gx));
+ // Finish the real upper-floor opening with a thin structural underside
+ // border. One instanced batch; no physics changes or additional downloads.
+ const rim=stairwellRimSegments(layout);
+ if(rim.length){
+  const rimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,rim.length);
+  rimMesh.name='StairwellOpeningRim';rimMesh.frustumCulled=false;
+  rim.forEach((p,i)=>{
+   tmp.position.set(p.x,-.15,p.z);
+   tmp.rotation.set(0,0,0);
+   tmp.scale.set(p.w,.13,p.d);
+   tmp.updateMatrix();rimMesh.setMatrixAt(i,tmp.matrix);
+  });
+  rimMesh.instanceMatrix.needsUpdate=true;
+  floorDeck.add(rimMesh);
+ }
+ // In a multi-storey building the actual upper deck replaces overlapping
+ // lower ceiling tiles, so its underside is visible from downstairs.
+ const roofCells=options.ceilingCells??layout.floors.filter(c=>
+  !layout.ceilingHoles?.has(c.gz*GRID_W+c.gx));
  const roof=new THREE.InstancedMesh(geometry(TILE+.02,.13,TILE+.02),ceilingMat,roofCells.length);
  roof.name='CeilingTiles';roof.frustumCulled=false;
  roofCells.forEach((tile,i)=>{
