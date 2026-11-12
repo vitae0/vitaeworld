@@ -11,6 +11,7 @@ import {daylightAt} from './daylight.js';
 import {stairwellRimSegments} from './floor-visibility.js';
 import {addWallFeatureVisuals} from './wall-feature-visuals.js';
 import {addInteriorFitoutVisuals} from './interior-fitout-visuals.js';
+import {addPracticalLights} from './practical-lighting.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -34,6 +35,8 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  const ceiling=new THREE.Group();ceiling.name='CeilingOcclusionLayer';root.add(ceiling);
  const detailGroup=new THREE.Group();detailGroup.name='DetailedInteriorProps';
  root.add(detailGroup);
+ const decorGroup=new THREE.Group();decorGroup.name='OptionalSmallDressing';
+ detailGroup.add(decorGroup);
  const owned=new Set();
  const tmp=new THREE.Object3D();
  const color=(n)=>new THREE.Color(n);
@@ -206,10 +209,11 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
  detailGroup.add(highlightsMesh);
  // Theme-consistent art, shelves and tabletop details share four GPU batches.
- addModelledDecor(detailGroup,layout.decorations||[],owned,{textileMat});
+ addModelledDecor(decorGroup,layout.decorations||[],owned,{textileMat});
  const hemi=new THREE.HemisphereLight(style?.light||0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
+ const practical=addPracticalLights(root,layout);
  function setDaylight(hour){
   const light=daylightAt(hour);
   hemi.intensity=light.hemisphereIntensity;
@@ -219,6 +223,9 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
   // Ceiling accents are deliberately inexpensive emissive geometry, not
   // hundreds of new realtime lights in every room.
   emissive.emissiveIntensity=.22+(.82*(1-light.sunlight));
+  if(fitoutVisuals.glow)
+   fitoutVisuals.glow.emissiveIntensity=.17+(1-light.sunlight)*.72;
+  practical.setDaylight(light.sunlight);
  }
  setDaylight(14);
  const doors=buildDoorVisuals(root,layout,owned);
@@ -235,7 +242,17 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
   colors:palette,paletteName:palette.name,
   fitoutStats:{parts:fitoutVisuals.count,batches:fitoutVisuals.batches},
   setDaylight,
-  setLightingActive(value){hemi.visible=Boolean(value);sun.visible=Boolean(value);},
+  setQualityBudget(budget){
+   decorGroup.visible=budget?.showClutter!==false;
+   practical.setBudget(budget?.practicalLights||0);
+  },
+  setLightingActive(value){
+   hemi.visible=Boolean(value);sun.visible=Boolean(value);
+   practical.setActive(value);
+  },
+  getLightReport(){return {
+   available:practical.availableCount,active:practical.activeCount
+  };},
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
   tick(dt){doors.update(dt);propStates.update(dt);},
   setInteractionState(item,on){
