@@ -29,14 +29,14 @@ export function adaptivePixelRatio({
  current,minimum,maximum,fps,targetFps,lowSamples=0,highSamples=0
 }){
  if(![current,minimum,maximum,fps,targetFps].every(Number.isFinite))
-  return {current,lowSamples:0,highSamples:0,changed:false};
+  return {current,minimum,maximum,lowSamples:0,highSamples:0,changed:false};
  const low=fps<targetFps-6,high=fps>targetFps+11;
  const down=low?lowSamples+1:0,up=high?highSamples+1:0;
  if(down>=4&&current>minimum+.01)
   return {current:+Math.max(minimum,current-.12).toFixed(2),
-   lowSamples:0,highSamples:0,changed:true};
+   minimum,maximum,lowSamples:0,highSamples:0,changed:true};
  if(up>=7&&current<maximum-.01)
   return {current:+Math.min(maximum,current+.06).toFixed(2),
    lowSamples:0,highSamples:0,changed:true};
- return {current,lowSamples:down,highSamples:up,changed:false};
+ return {current,minimum,maximum,lowSamples:down,highSamples:up,changed:false};
 }
