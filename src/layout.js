@@ -7,6 +7,7 @@ import {resolveInteriorStyle} from './style-families.js';
 import {assignRoomArchetypes,roomGenerationReport} from './room-archetypes.js';
 import {generateWallFeatures,wallFeatureReport} from './wall-features.js';
 import {makeInteriorFitout} from './interior-fitout.js';
+import {auditInterior} from './interior-audit.js';
 export {TILE,GRID_W,GRID_H,WALL_HEIGHT,BUILDING_TYPES,BUILDING_TYPE_IDS,cellWorld,worldCell,
   isWalkable,seededRandom} from './topology.js';
 export {ROOM_NAMES,ROOM_THEMES} from './semantics.js';
@@ -28,8 +29,10 @@ export function generateLayout(seed='vitae-001',type='auto',program=null,interio
  furnished.qualityReport.decorations=furnished.decorations.length;
  furnished.wallFeatures=generateWallFeatures(furnished);
  furnished.fitout=makeInteriorFitout(furnished,seed);
+ furnished.interiorAudit=auditInterior(furnished);
  furnished.styleReport={...roomGenerationReport(furnished),
   wallTreatments:wallFeatureReport(furnished),
-  fitout:furnished.fitout.report};
+  fitout:furnished.fitout.report,
+  auditScore:furnished.interiorAudit.score};
  return furnished;
 }
