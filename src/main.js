@@ -5,9 +5,17 @@ import {ROOM_TYPES} from './semantics.js';
 import {buildBuildingWorld} from './building-world.js';
 import {CHARACTERS,addCharacter} from './assets.js';
 import {Controller} from './controls.js';
+import {initPanels} from './ui-panels.js';
 
 const $=(selector)=>document.querySelector(selector);
 const canvas=$('#scene');
+initPanels({
+ settingsPanel:$('#settingsPanel'),mapPanel:$('#mapPanel'),
+ settingsToggle:$('#toggleSettings'),mapToggle:$('#toggleMap'),
+ closeSettings:$('#closeSettings'),closeMap:$('#closeMap'),
+ compactQuery:window.matchMedia('(max-width: 800px)'),
+ documentRef:document
+});
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.25:1.75));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -54,6 +62,7 @@ function generate(nextSeed){
  });
  if(controller)controller.setLayout(building);
  else controller=new Controller(canvas,camera,building,avatar,$('#touchPad'),$('#thumb'));
+ controller.setTouchSensitivity($('#touchSensitivity').value);
  world.setCurrentLevel(0);
  world.setFirstPerson(controller.mode==='first');
  $('#seed').value=seed;
@@ -90,6 +99,11 @@ $('#random').addEventListener('click',()=>generate(newSeed()));
 $('#seed').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generate(e.target.value);e.target.blur();}});
 $('#viewButton').addEventListener('click',toggleView);
 $('#mobileView').addEventListener('click',toggleView);
+$('#touchSensitivity').addEventListener('input',e=>{
+ const multiplier=Number(e.currentTarget.value);
+ $('#touchSensitivityValue').textContent=multiplier.toFixed(1)+'×';
+ controller?.setTouchSensitivity(multiplier);
+});
 $('#capture').addEventListener('click',()=>controller.capture());
 $('#character').addEventListener('click',()=>{
  characterIndex=(characterIndex+1)%CHARACTERS.length;
