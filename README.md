@@ -1,8 +1,39 @@
-# VitaeWorld | Architecture Lab 14
+# VitaeWorld | Architecture Lab 15
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 15 — Restore classic semantic furnishing; keep upstairs floor visible
+
+**Default furniture positioning restored.** The trained FloorplanQA
+position bonus added in Lab 11 is **no longer applied** to live
+placement. The original deterministic, interpretable 40D semantics +
+16D spatial features, nearest companion relationships, clearance,
+long-room end walls and doorway accessibility remain the authoritative
+scorer. We retain the previously trained JSON/holdout data **for
+offline comparison only**; it does not affect generated scenes.
+`layout.placementMethod === "semantic-rules-v2"` makes this explicit.
+
+As a narrow improvement that does not disturb the old room-composition
+scorer, `src/placement-constraints.js` rejects tall storage, screens
+and other potentially obstructive furniture directly across a real
+external window. Low sofas, desks and other objects that sit under the
+sill are not banned. Door passage clearance, collision checks and
+post-orientation accessibility are preserved.
+
+**Structural upper floor always present from below:** upper floor's
+`StructuralFloorDeck` group is detached from the rest of that
+upper-storey scene. When downstairs, the upper rooms, GLBs, lamps,
+decor and walls stay **culled**, but the actual upstairs floor slab
+is rendered above the player. The original staircase holes are still
+cut through the deck. During stairs both floors are temporarily visible;
+upstairs the upper floor renders normally. No duplicate slab is created.
+The separate floor group is explicitly disposed upon regeneration.
+
+Tests: `tests/furniture-floor-deck.test.mjs` checks the classic
+placement method and furniture safety, upstairs deck visibility,
+stairwell cutouts, and window-blocking constraints.
 
 ## Lab 14 — Real window apertures, façade finishes and controllable daylight
 
@@ -142,9 +173,11 @@ study or proof of superior aesthetic layout.
 
 `model/layout-priors.json` is the checked-in trained parameter file,
 `model/layout-metrics.json` reports the holdout results, and
-`src/learned-layout.js` applies only a bounded **-0.22 to +0.24**
-candidate-placement bias. All existing door, obstacle, boundary,
-accessibility, and 5:3 room rules remain authoritative.
+`src/learned-layout.js` can calculate a bounded **-0.22 to +0.24**
+candidate-placement bias for **offline comparison only**.
+**As of Lab 15, this bonus is NOT active in the game** because the
+classic semantic placement was preferred. All existing door,
+obstacle, boundary, accessibility, and 5:3 room rules remain authoritative.
 
 The first model learns **where furniture tends to go within a room**.
 It does not generate building graphs, infer 3D meshes or predict correct
