@@ -2,8 +2,8 @@
 // all visual pieces are batched into just four instanced meshes.
 import * as THREE from 'three';
 
-export function addDecorVisuals(parent,decorations,owned){
- const components={box:[],round:[],leaf:[],glow:[]};
+export function addDecorVisuals(parent,decorations,owned,{textileMat=null}={}){
+ const components={box:[],round:[],leaf:[],glow:[],rug:[]};
  const put=(kind,base,x,y,z,w,h,d,color,tilt=0)=>{
   const a=base.angle||0,c=Math.cos(a),s=Math.sin(a);
   components[kind].push({
@@ -17,14 +17,56 @@ export function addDecorVisuals(parent,decorations,owned){
  for(const item of decorations){
   const ink=item.color,paper=item.paper,accent=item.accent,green=item.leaf;
   if(item.source==='floor'){
-   // Thin textile runner, visible but never a collision obstacle.
-   box(item,0,.012,0,item.w,.024,item.d,item.accent);
-   box(item,0,.026,0,item.w*.88,.004,item.d*.87,item.paper);
-   box(item,0,.031,0,item.w*.70,.003,item.d*.66,item.color);
+   // Cloth base is one shared textured instanced mesh. Geometric fringe and
+   // kilim stripes read clearly even in the lowest mobile quality preset.
+   put('rug',item,0,.014,0,item.w,.022,item.d,item.paper);
+   box(item,0,.028,0,item.w*.88,.003,item.d*.83,item.color);
+   if(item.kind==='kilim'){
+    for(const side of [-1,1]){
+     box(item,side*item.w*.38,.031,0,.042,.006,item.d*.77,item.accent);
+     for(let i=-3;i<=3;i++){
+      box(item,i*item.w*.10,.033,side*item.d*.30,
+       item.w*.064,.004,item.d*.045,item.accent);
+     }
+    }
+   }else box(item,0,.03,0,item.w*.67,.003,item.d*.65,item.accent);
+   continue;
+  }
+  if(item.source==='ceiling'){
+   // Four inexpensive fixture families. Bright diffusers are emissive;
+   // point lights are deliberately omitted to protect mobile FPS.
+   box(item,0,.29,0,.22,.08,.22,ink);
+   if(item.kind==='flush'){
+    round(item,0,.12,0,.49,.12,.49,accent);
+    put('glow',item,0,.065,0,.42,.11,.42,0xffebc7);
+   }else if(item.kind==='track'){
+    box(item,0,.19,0,.84,.08,.12,ink);
+    for(const x of [-.27,0,.27]){
+     box(item,x,.035,0,.12,.16,.13,accent);
+     put('glow',item,x,-.045,0,.14,.12,.14,0xffd8a5);
+    }
+   }else if(item.kind==='chandelier'){
+    box(item,0,.09,0,.065,.39,.065,ink);
+    for(let i=0;i<5;i++){
+     const a=i*Math.PI*2/5,x=Math.sin(a)*.35,z=Math.cos(a)*.35;
+     box(item,x,-.12,z,.045,.095,.045,accent);
+     put('glow',item,x,-.19,z,.17,.17,.17,0xffecc8);
+    }
+   }else{
+    box(item,0,.04,0,.055,.42,.055,ink);
+    round(item,0,-.16,0,.50,.19,.50,accent);
+    put('glow',item,0,-.25,0,.32,.12,.32,0xffe4bd);
+   }
    continue;
   }
   if(item.source==='wall'){
-   if(item.kind==='art'){
+   if(item.kind==='poster'){
+    box(item,0,0,0,item.w,item.h,.039,ink);
+    box(item,0,0,.028,item.w-.065,item.h-.065,.019,paper);
+    box(item,0,.12,.043,item.w*.63,.16,.018,accent);
+    box(item,0,-.04,.043,item.w*.68,.11,.018,green);
+    box(item,-.12,-.19,.045,item.w*.28,.055,.018,ink);
+   }else if(item.kind==='art'){
     box(item,0,0,0,item.w,item.h,.058,ink);
     box(item,0,0,.039,item.w-.09,item.h-.09,.021,paper);
     // Five simple compositions share a palette but differ in visual rhythm.
@@ -104,13 +146,15 @@ export function addDecorVisuals(parent,decorations,owned){
   box:new THREE.BoxGeometry(1,1,1),
   round:new THREE.CylinderGeometry(.5,.5,1,10),
   leaf:new THREE.IcosahedronGeometry(.5,1),
-  glow:new THREE.IcosahedronGeometry(.5,1)
+  glow:new THREE.IcosahedronGeometry(.5,1),
+  rug:new THREE.BoxGeometry(1,1,1)
  };
  const materials={
   box:new THREE.MeshStandardMaterial({color:0xffffff,roughness:.84,metalness:0}),
   round:new THREE.MeshStandardMaterial({color:0xffffff,roughness:.70,metalness:.04}),
   leaf:new THREE.MeshStandardMaterial({color:0xffffff,roughness:.94,metalness:0}),
-  glow:new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffddb0,emissiveIntensity:.55})
+  glow:new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffddb0,emissiveIntensity:.55}),
+  rug:textileMat||new THREE.MeshStandardMaterial({color:0xffffff,roughness:.97})
  };
  const transform=new THREE.Object3D();
  for(const kind of Object.keys(components)){
