@@ -1,8 +1,57 @@
-# VitaeWorld | Architecture Lab 18
+# VitaeWorld | Architecture Lab 19
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 19 — Interior feature-complete prototype pass
+
+**Functional finishes by room type:** Kitchens receive small tiled
+backsplash surfaces on intact walls near functional work units; bathrooms
+and utility rooms receive durable wainscot/tile; bedrooms receive
+headboard-like wall panels; offices/studios receive acoustic panels;
+lounges and galleries receive restrained accents. True structural
+door heads remain, now with nonblocking door casings and flush
+thresholds. Coherent ceiling cove outlines and sparing corridor
+wayfinding strips make the floors read as connected, inhabited spaces.
+No invisible collision blockers are added, and all decorative finish
+geometry is shared in at most seven GPU instanced batches per story.
+
+**Door signs and hotel numbering:** Above each interior doorway,
+room identity signage is drawn from one small per-story texture atlas
+and one instanced framing batch. Bathroom signs say WC; hotel suites
+receive stable room numbers. They do not turn any door into a new
+action, alter privacy, or change collision.
+
+**Adaptive mobile-first graphics:** The settings panel now offers
+Auto / Economy / Balanced / Cinematic. The world shows both storeys'
+structural shells and furniture in every mode, while Economy can
+hide optional small decorative dressing, cap pixel density, and
+eliminate costly local practical point lights. Balanced allows up to
+two point lights on the active floor, Cinematic up to four, always
+without shadow maps. In Auto, screen-space resolution decreases only
+after sustained measured FPS drops and rises gradually with a longer
+hysteresis. Graphics preferences are local to the device, not encoded
+in the world's deterministic seed or shared URL.
+
+**Mechanical interior audit:** Each generated floor obtains an
+independent report checking furniture overlap, required furnishing,
+room navigation, intact above-door masonry, window privacy/head/sill
+and preserved façade collision, plus finite placement of architectural
+finishes. An aggregate score is displayed in the settings panel.
+This score is **only mechanical QA**, not a visual or aesthetic
+rating; real-device inspection still matters.
+
+**Structural scorer:** The topology evaluator now has individual
+room-count/area priors for all eight grammars, rather than applying
+the compact-residence prior to rowhouse, loft and villa.
+
+**Acceptance limits:** This completes a broad deterministic interior
+feature pass for the current browser prototype. It does **not**
+assert photorealistic AAA character animation, real-time physically
+correct global illumination, more than two playable storeys, or
+unmeasured phone frame rates. See
+[Interior Release Checklist](docs/INTERIOR_RELEASE_CHECKLIST.md).
 
 ## Lab 18 — Material families, all-floor rendering and deterministic architecture polish
 
