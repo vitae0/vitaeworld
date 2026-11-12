@@ -149,6 +149,18 @@ test('cafe must keep its entire public room reachable with required furniture',(
  const audit=auditBuildingInteriors(building);
  const inaccessible=audit.floors.flatMap(f=>f.issues.filter(
   i=>i.type==='room-inaccessible'));
+ const details=inaccessible.map(issue=>{
+  const layout=building.stories[0].layout;
+  const room=layout.rooms.find(r=>r.id===issue.room);
+  const props=layout.props.filter(p=>p.roomId===issue.room);
+  return {type:room.type,area:room.area,cellCount:room.cells.length,
+   withoutFurniture:roomAccessibility(layout,room,[]).ratio,
+   mandatoryOnly:roomAccessibility(layout,room,
+    props.filter(p=>p.mandatory)).ratio,
+   door:layout.doors.find(d=>d.roomId===room.id),
+   furniture:props.map(p=>({role:p.role,model:p.model,
+    x:p.x,z:p.z,w:p.w,d:p.d,mandatory:p.mandatory}))};
+ });
  assert.deepEqual(inaccessible,[],
-  'required table/chairs may not turn a cafe into an inaccessible maze');
+  'Café room accessibility: '+JSON.stringify(details));
 });
