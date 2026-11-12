@@ -10,6 +10,7 @@ import {resolveInteriorStyle} from './style-families.js';
 import {generateWallFeatures,wallFeatureReport} from './wall-features.js';
 import {roomGenerationReport} from './room-archetypes.js';
 import {makeInteriorFitout} from './interior-fitout.js';
+import {auditInterior,auditBuildingInteriors} from './interior-audit.js';
 
 export function generateBuilding(seed='vitae-001',type='auto',count=2,programId='auto',styleId='auto'){
  const floors=Math.max(1,Math.min(2,Math.floor(count)||2));
@@ -38,9 +39,11 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2,programId=
   layout.wallFeatures=generateWallFeatures(layout);
   // Recalculate ceiling details after stair cutouts and corridor promotion.
   layout.fitout=makeInteriorFitout(layout,layout.seed);
+  layout.interiorAudit=auditInterior(layout);
   layout.styleReport={...roomGenerationReport(layout),
    wallTreatments:wallFeatureReport(layout),
-   fitout:layout.fitout.report};
+   fitout:layout.fitout.report,
+   auditScore:layout.interiorAudit.score};
  }
  const rooms=stories.flatMap(s=>s.layout.rooms.map(r=>({
   ...r,storey:s.index,globalId:s.index+':'+r.id
@@ -50,11 +53,13 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2,programId=
   x:stairs[0].start.x-stairs[0].dx*stories[0].layout.tile,
   z:stairs[0].start.z-stairs[0].dz*stories[0].layout.tile
  }:stories[0].layout.spawn;
- return {seed:String(seed),interiorStyle:interiorStyle.id,
+ const result={seed:String(seed),interiorStyle:interiorStyle.id,
   programId:program?.id||'auto',
   programLabel:program?.label||'Karma kullanım',
   buildingType:stories[0].layout.buildingType,
   buildingName:stories[0].layout.buildingName,
   stories,stairs,rooms,levelHeight:STOREY_HEIGHT,
-  spawn:{...start,y:0},geometryVersion:6};
+  spawn:{...start,y:0},geometryVersion:7};
+ result.interiorAudit=auditBuildingInteriors(result);
+ return result;
 }
