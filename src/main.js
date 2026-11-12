@@ -4,7 +4,8 @@ import {generateBuilding} from './building.js';
 import {BUILDING_PROGRAMS,BUILDING_PROGRAM_IDS,PROGRAM_CATEGORIES} from './building-programs.js';
 import {ROOM_TYPES} from './semantics.js';
 import {buildBuildingWorld} from './building-world.js';
-import {CHARACTERS,addCharacter} from './assets.js';
+import {CHARACTERS,addCharacter,modelLoadMetrics} from './assets.js';
+import {recipeFromQuery,recipeQuery} from './scene-recipe.js';
 import {Controller} from './controls.js';
 import {initPanels} from './ui-panels.js';
 import {createInteractionSystem} from './interactions.js';
@@ -30,7 +31,9 @@ for(const category of PROGRAM_CATEGORIES){
  }
  buildingUse.append(group);
 }
-buildingUse.value='family_house';
+const initialRecipe=recipeFromQuery(window.location.search);
+buildingUse.value=initialRecipe.program;
+$('#buildingStyle').value=initialRecipe.style;
 initPanels({
  settingsPanel:$('#settingsPanel'),mapPanel:$('#mapPanel'),
  settingsToggle:$('#toggleSettings'),mapToggle:$('#toggleMap'),
@@ -48,8 +51,8 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x08151d);
 scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
-let seed='vitae-001',paletteIndex=0,characterIndex=0,
-    buildingStyle='auto',buildingProgram='family_house';
+let seed=initialRecipe.seed,paletteIndex=0,characterIndex=0,
+    buildingStyle=initialRecipe.style,buildingProgram=initialRecipe.program;
 let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
 let interactions=null,selectedInteraction=null,interactionFrames=0;
@@ -106,7 +109,11 @@ function createAvatar(){
  else avatar.group.position.set(layout.spawn.x,0.11,layout.spawn.z);
 }
 function generate(nextSeed){
- seed=String(nextSeed).trim()||'vitae-001';
+ seed=String(nextSeed).trim().slice(0,80)||'vitae-001';
+ const query=recipeQuery({seed,style:buildingStyle,program:buildingProgram},
+  window.location.search);
+ if(window.history?.replaceState)
+  window.history.replaceState(null,'',window.location.pathname+query);
  building=generateBuilding(seed,buildingStyle,2,buildingProgram);
  layout=building.stories[0].layout;shownLevel=0;
  const generation=++generationId;
@@ -142,6 +149,17 @@ function updateProgress(){
  const received=loadedAssets+failedAssets;
  $('#assetFill').style.width=(totalAssets?received/totalAssets*100:100)+'%';
  $('#assetStatus').textContent=`${loadedAssets}/${totalAssets} 3D ASSETS`+(failedAssets?` · ${failedAssets} FALLBACK`:'');
+ const metrics=modelLoadMetrics();
+ const unresolved=totalAssets-(loadedAssets+failedAssets);
+ const health=metrics.failed>0?'HATA: '+metrics.failed:
+  unresolved>0?'YÜKLENİYOR':'HAZIR';
+ $('#assetHealth').textContent=health;
+ $('#assetDetails').textContent=
+  'TEKİL MODEL: '+metrics.loaded+' başarılı / '+metrics.failed+
+  ' başarısız · Kuyruk: '+metrics.queued+
+  ' · Aynı kaynaktan tekrar indirme yok'+
+  (metrics.fallback?' · '+metrics.fallback+' model yedek kaynaktan geldi':'')+
+  (metrics.errors.length?' · Son hata: '+metrics.errors.at(-1).error:'');
 }
 function toggleView(){
  const mode=controller.toggleView();
@@ -162,6 +180,19 @@ $('#buildingStyle').addEventListener('change',e=>{
 });
 $('#generate').addEventListener('click',()=>generate($('#seed').value));
 $('#random').addEventListener('click',()=>generate(newSeed()));
+$('#retryAssets').addEventListener('click',()=>generate(seed));
+$('#shareWorld').addEventListener('click',async()=>{
+ const link=window.location.origin+window.location.pathname+
+  recipeQuery({seed,style:buildingStyle,program:buildingProgram},
+   window.location.search);
+ const label=$('#shareWorld span');
+ try{
+  await navigator.clipboard.writeText(link);
+  label.textContent='✓ BAĞLANTI KOPYALANDI';
+ }catch{
+  window.prompt('Bağlantıyı kopyalayın:',link);
+ }
+});
 $('#seed').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();generate(e.target.value);e.target.blur();}});
 $('#viewButton').addEventListener('click',toggleView);
 $('#mobileView').addEventListener('click',toggleView);
