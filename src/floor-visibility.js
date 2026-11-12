@@ -2,18 +2,21 @@
 // visible while the player is on the lower floor; upper walls, props,
 // windows and interaction scenes remain culled for browser performance.
 export function floorVisibilityPlan(building,current,firstPerson,playerY){
- const stairs=building.stairs||[];
- const onStairs=stairs.some(s=>
+ // Render every storey's architectural shell and real structural deck.
+ // The current and adjacent floors keep all furniture/GLBs. Distant
+ // floors can use shell mode in taller future buildings.
+ const floors=building.stories.length;
+ const onStairs=(building.stairs||[]).some(s=>
   playerY>s.from*building.levelHeight+.14&&
   playerY<s.to*building.levelHeight-.14);
  return building.stories.map((_,i)=>{
-  const rooms=i===current||onStairs;
+  const detail=onStairs||Math.abs(i-current)<=1||floors<=2;
   return {
-   rooms,
-   // The NEXT floor's deck serves as the physical overhead slab while
-   // standing below, but the rest of that story stays invisible.
-   deck:i===current||i===current+1||onStairs,
-   ceiling:firstPerson&&rooms
+   rooms:true,
+   deck:true,
+   ceiling:firstPerson&&i===current,
+   detail,
+   tier:detail?'full':'shell'
   };
  });
 }
