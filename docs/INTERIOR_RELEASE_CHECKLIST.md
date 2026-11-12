@@ -6,6 +6,8 @@ Automated checks do not substitute for visual browser acceptance.
 ## Automated release gates
 
 The following must pass before merging to `main`:
+- `npm run interiors:certify` for the complete 36-programme,
+  two-storey structural audit (strict failure on any defect).
 - Full Node test suite (geometry, accessibility, style/seed
   determinism, GLB verification, all-floor rendering).
 - Lab 19 finish-plan and quality regression tests across the eight
