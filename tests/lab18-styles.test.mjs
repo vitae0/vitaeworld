@@ -29,8 +29,8 @@ test('14 real style families with distinct coordinated material and light preset
  assert.throws(()=>resolveInteriorStyle('a',null,'invalid'));
 });
 
-test('all 26 local procedural material patterns are finite, diverse and repeatable',()=>{
- assert.equal(PROCEDURAL_SURFACES.length,26);
+test('all 27 local procedural material patterns are finite, diverse and repeatable',()=>{
+ assert.equal(PROCEDURAL_SURFACES.length,27);
  const signatures=new Set();
  for(const kind of PROCEDURAL_SURFACES){
   const pixels=[[0,0],[12,33],[65,59],[122,122],[240,19],[245,253]]
