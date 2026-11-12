@@ -218,3 +218,22 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
  font-size:8px;font-weight:700;letter-spacing:1px}
 @media(max-width:800px){.daylightAuto{height:44px;flex-basis:44px}
  #dayTime{min-height:36px}}
+
+/* Lab 17: visible asset diagnostics and deterministic shareable scenes. */
+.shareWorld{display:block;width:100%;min-height:38px;padding:8px 10px;
+ margin:7px 0 11px;background:rgba(17,45,52,.45);
+ color:#ccf5e9;border:1px solid rgba(139,219,200,.35);
+ border-radius:7px;font-family:inherit;font-size:10px;font-weight:700;
+ letter-spacing:.8px;cursor:pointer}
+.shareWorld:hover,.shareWorld:focus-visible{border-color:#b3fce2;
+ background:rgba(34,93,99,.5)}
+.modelHealth{margin:6px 0 11px;padding:7px 0;border-top:1px solid rgba(153,198,192,.22)}
+.modelHealth summary{display:flex;justify-content:space-between;
+ gap:10px;align-items:center;color:#b3dad2;font-size:10px;
+ letter-spacing:.6px;font-weight:700;cursor:pointer}
+.modelHealth summary::before{content:'+';display:inline-block}
+.modelHealth[open] summary::before{content:'−'}
+#assetHealth{color:#d6fae7;font-variant-numeric:tabular-nums}
+#assetDetails{font-size:10px;line-height:1.65;color:#b6d1cc;overflow-wrap:anywhere}
+.modelHealth .shareWorld{margin:9px 0 4px}
+@media(max-width:800px){.shareWorld{min-height:44px}}
