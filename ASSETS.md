@@ -40,3 +40,24 @@ SHA-256 checksums and records URLs in `public/textures/sources.json`.
 - Poly Haven grants all source maps under CC0 1.0. Use of its public API is
   credited as requested by its API terms: **Powered by Poly Haven**.
 - Keep the complete manifest for traceable provenance and asset hashes.
+
+## Lab 10 catalogue expansion and actual fixture lighting
+
+- Added **20 more furniture names from the Kenney Furniture Kit**,
+  bringing the active semantic furniture catalogue to **81 unique models**.
+  All were checked against `Hidencod/tge-assets/catalog.json` at
+  `3ddcc695adbba9fb918cf31b7c139b3f95b76910`, the exact same
+  commit used by `src/assets.js`.
+- Additional wall / ceiling fixture models, also in that pinned catalogue:
+  `lampwall`, `lampsquareceiling` and `ceilingfan`, all from
+  Kenney's CC0 Furniture Kit.
+- `src/fixture-specs.js` contains the model selector. `src/fixture-assets.js`
+  uses cached GLB source geometry and instancing for repeated lights, so
+  a separate GLB is **not downloaded for every lamp**.
+- Procedurally generated lighting remains visible when an asset cannot
+  be downloaded or parsed, including when offline. Some fixture categories
+  remain deliberately procedural because the pack does not contain their
+  actual silhouettes.
+- Native GLB forward orientation remains a separate visual-review item.
+  Companion-facing corrections never claim to infer a mesh's anatomical
+  or functional forward direction from an axis-aligned bounding box.
