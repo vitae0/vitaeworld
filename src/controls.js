@@ -16,6 +16,7 @@ export class Controller {
   this.touchPad=touchPad;this.thumb=thumb;this.elapsed=0;
   this.touchLookMultiplier=2.2;
   this.touchMoveMultiplier=1.18;
+  this.interactions=null;this.pose=null;
   this.bind();
   this.updateCamera();
  }
@@ -87,6 +88,9 @@ export class Controller {
    y:clamp(y/limit*this.touchMoveMultiplier,-1,1)};
   this.thumb.style.transform=`translate(calc(-50% + ${this.touch.x*limit}px),calc(-50% + ${this.touch.y*limit}px))`;
  }
+ setInteractionSystem(system){this.interactions=system;this.pose=null;}
+ startPose(pose){this.pose={...pose};this.updateCamera();}
+ endPose(){this.pose=null;this.updateCamera();}
  setTouchSensitivity(multiplier){
   this.touchLookMultiplier=clamp(Number(multiplier)||2.2,1,4);
  }
@@ -105,7 +109,7 @@ export class Controller {
  }
  setLayout(layout){
   this.building=layout.stories?layout:null;
-  this.level=0;
+  this.level=0;this.pose=null;
   this.layout=this.building?layout.stories[0].layout:layout;
   this.position.set(layout.spawn.x,layout.spawn.y??0,layout.spawn.z);
   this.yaw=this.building?.stairs?.[0]?
@@ -121,7 +125,7 @@ export class Controller {
   forward-=this.touch.y;
   strafe+=this.touch.x;
   const mag=Math.hypot(forward,strafe);
-  const moving=mag>0.06;
+  const moving=!this.pose&&mag>0.06;
   if(moving){
     forward/=Math.max(1,mag);strafe/=Math.max(1,mag);
     const dx=-Math.sin(this.yaw)*forward+Math.cos(this.yaw)*strafe;
@@ -130,11 +134,13 @@ export class Controller {
     // Separate axes slide along walls; the character cannot walk through a wall or a sofa.
     const x=this.position.x+dx*speed*dt, z=this.position.z+dz*speed*dt;
     const probe=(x,z)=>{
-     if(!this.building){
-      return isWalkable(this.layout,x,z,.31)?
-        {height:this.position.y,level:this.level}:null;
-     }
-     return sampleWalkableGround(this.building,x,z,this.position.y,.31);
+     const ground=!this.building
+      ?(isWalkable(this.layout,x,z,.31)?
+        {height:this.position.y,level:this.level}:null)
+      :sampleWalkableGround(this.building,x,z,this.position.y,.31);
+     if(!ground||this.interactions?.doorClosedAt(ground.level,x,z,.31))
+      return null;
+     return ground;
     };
     const alongX=probe(x,this.position.z);
     if(alongX){this.position.x=x;this.position.y=alongX.height;this.level=alongX.level;}
@@ -144,8 +150,15 @@ export class Controller {
     this.heading=Math.atan2(-dx,-dz);
   }
   if(this.avatar){
-    this.avatar.group.position.set(this.position.x,this.position.y+.11,this.position.z);
-    this.avatar.group.rotation.y=this.heading;
+    const pose=this.pose;
+    const target=pose
+      ?new THREE.Vector3(pose.x,pose.y+.11,pose.z)
+      :new THREE.Vector3(this.position.x,this.position.y+.11,this.position.z);
+    this.avatar.group.position.lerp(target,Math.min(1,dt*(pose?5.5:12)));
+    this.avatar.group.rotation.set(0,pose?.angle??this.heading,0);
+    if(pose?.kind==='lie')this.avatar.group.rotation.x=-Math.PI/2;
+    else if(pose?.kind==='bathe')this.avatar.group.rotation.x=-.83;
+    this.avatar.group.scale.y=pose?.kind==='sit'?.67:1;
     this.avatar.group.visible=this.mode==='third';
     animateCharacter(this.avatar,dt,this.elapsed,moving);
   }
@@ -153,7 +166,11 @@ export class Controller {
   return moving;
  }
  updateCamera(){
-  const eye=new THREE.Vector3(this.position.x,this.position.y+1.65,this.position.z);
+  const pose=this.pose;
+  const eye=pose
+   ?new THREE.Vector3(pose.x,pose.y+
+      (pose.kind==='sit'?.88:pose.kind==='bathe'?.55:.52),pose.z)
+   :new THREE.Vector3(this.position.x,this.position.y+1.65,this.position.z);
   const dir=new THREE.Vector3(-Math.sin(this.yaw)*Math.cos(this.pitch),
                             Math.sin(this.pitch),
                             -Math.cos(this.yaw)*Math.cos(this.pitch));
