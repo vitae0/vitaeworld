@@ -94,7 +94,7 @@ function topologicalGrid(rng,style,program=null){
   x0=6;x1=18;z0=1;z1=17;
   fillRect(11,12,z0,z1);fillRect(x0,x1,8,9);
  }else if(style==='loft'){
-  x0=2;x1=22;z0=3;z1=15;
+  x0=2;x1=22;z0=4;z1=14;
   fillRect(x0,x1,4,5);fillRect(x0,x1,13,14);
   fillRect(2,3,5,13);fillRect(21,22,5,13);
   fillRect(11,12,5,13);
