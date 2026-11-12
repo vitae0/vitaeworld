@@ -3,6 +3,7 @@ import {TILE,GRID_W,GRID_H,seededRandom,worldCell} from './topology.js';
 import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
 import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from './interior-quality.js';
 import {polishFurnitureOrientations} from './orientation-pass.js';
+import {learnedPlacementBonus} from './learned-layout.js';
 
 
 // Room identity constrains optional furnishing. Shared traits such as "modern"
@@ -261,7 +262,8 @@ export function populateRooms(layout,seed=layout.seed){
      const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd+galleryEnd;
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+architectural+
-       (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
+       (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+
+       learnedPlacementBonus(room,a,p)+rng()*.004;
      candidates.push({p,score,locationScore:positional});
     }
     if(!candidates.length)return false;
