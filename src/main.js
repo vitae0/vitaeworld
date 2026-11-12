@@ -17,7 +17,7 @@ initPanels({
  documentRef:document
 });
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.25:1.75));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.15:1.6));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.18;
@@ -27,7 +27,7 @@ scene.background=new THREE.Color(0x08151d);
 scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
 let seed='vitae-001',paletteIndex=0,characterIndex=0,buildingStyle='auto';
-let building=generateBuilding(seed,buildingStyle),layout=building.stories[0].layout;
+let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
 const clock=new THREE.Clock();
@@ -205,6 +205,7 @@ function loop(){
  const dt=clock.getDelta();
  if(document.hidden)return;
  controller.update(dt);
+ world?.setPlayerHeight(controller.position.y);
  if(controller.level!==shownLevel){
   shownLevel=controller.level;
   layout=building.stories[shownLevel].layout;
@@ -219,6 +220,6 @@ function loop(){
  }
  renderer.render(scene,camera);
 }
-createAvatar();
 generate(seed);
+createAvatar();
 loop();
