@@ -6,6 +6,7 @@ import {addFacingDebug} from './orientation-debug.js';
 import {buildDoorVisuals} from './door-visuals.js';
 import {buildInteractivePropVisuals} from './interactive-props.js';
 import {createSurfaceMaterial} from './materials.js';
+import {addWindowVisuals} from './window-visuals.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -95,6 +96,9 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  wallMesh.instanceMatrix.needsUpdate=true;
  if(wallMesh.instanceColor)wallMesh.instanceColor.needsUpdate=true;
  root.add(wallMesh);
+ // Window glass uses actual openings cut from the solid exterior walls.
+ // Rendered as four instanced batches with shared low-poly trim.
+ addWindowVisuals(root,layout,owned);
  const normalWalls=layout.walls.filter(w=>w.kind==='wall');
  const trimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
  trimMesh.name='ArchitecturalBaseboards';trimMesh.frustumCulled=false;
@@ -105,9 +109,10 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  trimMesh.instanceMatrix.needsUpdate=true;root.add(trimMesh);
  // Continuous crown molding and selective dado/chair rails. All profiles
  // follow the orthogonal wall segments, including walls beside door openings.
- const crownMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
+ const crownWalls=layout.walls.filter(w=>w.kind==='wall'||w.kind==='windowHead');
+ const crownMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,crownWalls.length);
  crownMesh.name='CrownMolding';
- normalWalls.forEach((w,i)=>{
+ crownWalls.forEach((w,i)=>{
   tmp.position.set(w.x,WALL_HEIGHT-.01,w.z);tmp.rotation.set(0,0,0);
   tmp.scale.set(w.w+.065,.115,w.d+.065);tmp.updateMatrix();
   crownMesh.setMatrixAt(i,tmp.matrix);
