@@ -12,6 +12,7 @@ import {stairwellRimSegments} from './floor-visibility.js';
 import {addWallFeatureVisuals} from './wall-feature-visuals.js';
 import {addInteriorFitoutVisuals} from './interior-fitout-visuals.js';
 import {addPracticalLights} from './practical-lighting.js';
+import {addSignageVisuals} from './room-signage-visuals.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -147,6 +148,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  // Window glass uses actual openings cut from the solid exterior walls.
  // Rendered as four instanced batches with shared low-poly trim.
  addWindowVisuals(root,layout,owned);
+ const signageVisuals=addSignageVisuals(root,layout,owned);
  const normalWalls=layout.walls.filter(w=>w.kind==='wall');
  const trimMesh=new THREE.InstancedMesh(geometry(1,1,1),trimMat,normalWalls.length);
  trimMesh.name='ArchitecturalBaseboards';trimMesh.frustumCulled=false;
@@ -240,7 +242,8 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  return {
   root,floorDeck,detachedFloor,ceiling,detailGroup,
   colors:palette,paletteName:palette.name,
-  fitoutStats:{parts:fitoutVisuals.count,batches:fitoutVisuals.batches},
+  fitoutStats:{parts:fitoutVisuals.count,batches:fitoutVisuals.batches,
+   signs:signageVisuals.count},
   setDaylight,
   setQualityBudget(budget){
    decorGroup.visible=budget?.showClutter!==false;
