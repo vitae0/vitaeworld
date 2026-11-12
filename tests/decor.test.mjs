@@ -40,7 +40,7 @@ for(const style of BUILDING_TYPE_IDS){
    }
    const wallPieces=layout.decorations.filter(d=>d.source==='wall');
    for(const decor of wallPieces){
-    assert.ok(decor.y>2,'wall item too low for walking space');
+    assert.ok(decor.y-decor.h/2>1.4,'wall item too low for walking space');
     assert.ok(decor.y+decor.h/2<3.25,'wall item clips ceiling');
     assert.ok(layout.walls.some(w=>w.kind==='wall'&&
       Math.hypot(w.x-decor.x,w.z-decor.z)<.2),'not attached to a wall');
