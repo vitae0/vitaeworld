@@ -1,6 +1,6 @@
 // Deterministic two-storey link, entirely independent from Three.js.
 // The ramp is an actual walkable height field; it is not a teleport trigger.
-import {TILE,GRID_W,GRID_H,worldCell,isWalkable,HALL} from './topology.js';
+import {TILE,GRID_W,GRID_H,worldCell,cellWorld,isWalkable,HALL} from './topology.js';
 export const STOREY_HEIGHT=3.65;
 const key=(gx,gz)=>gz*GRID_W+gx;
 const inside=(x,z)=>x>=0&&x<GRID_W&&z>=0&&z<GRID_H;
@@ -16,13 +16,13 @@ export function chooseStaircase(stories){
   const cells=Array.from({length:7},(_,i)=>({gx:x+dx*i,gz:z+dz*i}));
   if(!cells.every(c=>inside(c.gx,c.gz)&&
    base.grid[key(c.gx,c.gz)]===HALL&&upper.grid[key(c.gx,c.gz)]===HALL))continue;
-  const start=worldCell(x,z),end=worldCell(x+6*dx,z+6*dz);
-  const mid=worldCell(x+3*dx,z+3*dz);
+  const start=cellWorld(x,z),end=cellWorld(x+6*dx,z+6*dz);
+  const mid=cellWorld(x+3*dx,z+3*dz);
   // A real corridor stair should have reasonable end landings, not run
   // straight into another doorway or isolate the building's main entrance.
   const nearDoor=[...base.doors,...upper.doors].filter(d=>
    cells.slice(1,6).some(c=>{
-    const p=worldCell(c.gx,c.gz);
+    const p=cellWorld(c.gx,c.gz);
     return Math.hypot(p.x-d.x,p.z-d.z)<TILE*.85;
    })).length;
   possibilities.push({cells,start,end,dx,dz,
