@@ -1,8 +1,54 @@
-# VitaeWorld | Architecture Lab 12
+# VitaeWorld | Architecture Lab 13
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 13 — Functional building types, private glass-free doors and actual wall heads
+
+**Building programme vs architecture.** The `BİNA TÜRÜ` picker now offers
+**36 functional programmes** grouped into homes (12), retail/food (8),
+hospitality (6), civic/work (6), and workshops/special (4). The
+`BUILDING ARCHITECTURE` picker independently offers **eight** structural
+grammars: the former five plus **rowhouse, loft and villa**. Each
+programme selects its own preferred grammar, room-type frequency,
+minimum room functions and finish family; manually selecting a
+different architecture overrides only that grammar, not the programme.
+Those are 36 functionally distinct configurations of reusable modules,
+**not 36 unrelated generative engines**.
+
+**Doors:** All internal door openings now have an opaque lintel block
+that spans the full vertical space between the actual door top at
+`0.10 + DOOR_HEIGHT` and the wall top at `0.10 + WALL_HEIGHT`.
+No holes remain above any bathroom, room or exterior door. Doors
+from or to bathrooms/service alcoves are always fully **opaque**.
+Other internal doors receive deterministic seed-based opaque, glazed
+or frosted glass finishes; glass is actual transparent geometry
+inside a framed opening, not a fake overlay on a solid panel.
+Different doors animate independently using a handful of instanced
+draw calls.
+
+A visually mounted, **permanently locked and non-interactive external
+entrance** is now chosen on the outer envelope of each floorplan,
+never on the open-air courtyard side. It is intentionally excluded
+from `src/interactions.js` and cannot be opened with E or tap. No
+false exterior teleport/destination is offered.
+
+**New CC0 material families:** six official Poly Haven PBR asset IDs:
+`laminate_floor_02`, `marble_tiles`,
+`terracotta_floor_tiles`, `brick_wall_07`,
+`painted_plaster_wall` and `concrete_floor`.
+These augment the existing four families for ten total.
+The production CI texture synchronizer downloads 1K JPG diffuse,
+OpenGL normal and roughness maps with file hashes/provenance.
+Selected building programmes choose the floor and wall textures;
+missing maps fall back to procedural patterns without blocking play.
+
+**Regression tests:** `tests/building-programmes.test.mjs`
+enforces all 36 configurations, 5:3 max room ratio,
+exactly one uninterrupted upper solid wall per doorway,
+bathroom privacy and locked exterior entry. Existing furniture,
+stairs and movement checks remain in CI.
 
 ## Lab 12 — One-button world interactions
 
