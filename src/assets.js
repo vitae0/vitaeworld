@@ -11,7 +11,7 @@ const KENNEY_REV='3ddcc695adbba9fb918cf31b7c139b3f95b76910';
 const QUATERNIUS_REV='a488723e3a93d73d5c562d88f8a85353c37bc721';
 const KAYKIT_REV='8bf8d835cb7afa7cb3f4d893b0966c6b4e9b7727';
 const REMOTE_FURNITURE=`https://raw.githubusercontent.com/Hidencod/tge-assets/${KENNEY_REV}/packs/furniture-kit/`;
-const base=(import.meta.env?.BASE_URL||'/vitaeworld/').replace(/\\?\/?$/,'/');
+const base=(import.meta.env?.BASE_URL||'/vitaeworld/').replace(/\/?$/,'/');
 export const FURNITURE_BASE=base+'models/furniture/';
 export const CHARACTERS=[
  {id:'hero',label:'QUATERNIUS',description:'Stylized humanoid (CC0)',
