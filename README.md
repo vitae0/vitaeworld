@@ -1,8 +1,46 @@
-# VitaeWorld | Architecture Lab 11
+# VitaeWorld | Architecture Lab 12
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
 **Live prototype:** https://vitae0.github.io/vitaeworld/
+
+## Lab 12 — One-button world interactions
+
+The first working **V0.2 interaction slice** is implemented in
+`src/interactions.js` (pure selector and state transitions),
+`src/door-visuals.js` (real instanced hinged doors),
+`src/interactive-props.js` (cabinet/screen/lamp/water/appliance states),
+and the shared touch/keyboard controller.
+
+- **Selection:** interactables exist only on the current floor. Candidate
+  scoring uses distance to the object bounding box, facing, static-wall
+  line of sight, room relationships and previous-target stickiness.
+  Selection is not restricted to a tiny pixel-perfect ray.
+- **Contextual prompt:** exactly one **KULLAN** button appears over the
+  selected world-space object and disappears when nothing is reachable.
+  It contains the next action: `AÇ`, `KAPAT`, `OTUR`, `UZAN`,
+  `KÜVETE GİR`, `KALK`, etc. Use E on desktop or tap on mobile.
+- **Doors:** start closed, physically block the player and visually
+  rotate as an actual hinge when opened. Do not allow a door to close
+  on the character. Different floors have independent door states.
+- **Furniture:** sit on sofas/chairs/benches, lie on beds, get into a
+  bathtub; camera and avatar pose change and **KALK** returns to the
+  safe pre-action standing position. Storage doors swing, screens and
+  lamps light up, sinks/showers show flowing-water effects and stoves
+  show a visible hot ring when toggled.
+- **Performance:** pure interaction candidates and two instanced door
+  draw calls per floor; no per-frame physics re-creation or extra light
+  emitters. No automatic remote downloads are required for action logic.
+- **Tests:** `tests/interactions.test.mjs` verifies floor-specific
+  state, doorway collision, both-side reachability, target hysteresis
+  and pose enter/exit.
+
+**Known limitations:** Seated/lying avatar transforms are stylized
+fallbacks, not a verified skeletal IK animation set. Faucet and bath
+effects are visual, not a full water simulation. States are reset when
+the seed is regenerated; persistence, multiplayer synchronization,
+physical object manipulation and full 3D raycast occlusion are future
+work.
 
 ## Lab 11 — Externally trained room-layout placement model
 

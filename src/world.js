@@ -3,6 +3,8 @@ import {ROOM_THEMES,TILE,WALL_HEIGHT,GRID_W,GRID_H} from './layout.js';
 import {addFurniture} from './assets.js';
 import {addModelledDecor} from './fixture-assets.js';
 import {addFacingDebug} from './orientation-debug.js';
+import {buildDoorVisuals} from './door-visuals.js';
+import {buildInteractivePropVisuals} from './interactive-props.js';
 import {createSurfaceMaterial} from './materials.js';
 
 const PALETTES=[
@@ -147,8 +149,11 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  const hemi=new THREE.HemisphereLight(0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
+ const doors=buildDoorVisuals(root,layout,owned);
  const items=new THREE.Group();items.name='SemanticFurniture';root.add(items);
- for(const p of layout.props)addFurniture(items,p,owned,onAsset);
+ const holders=new Map();
+ for(const p of layout.props)holders.set(p.id,addFurniture(items,p,owned,onAsset));
+ const propStates=buildInteractivePropVisuals(holders,layout.props,owned);
  // Explicit opt-in diagnostic. Never show helper arrows in normal gameplay.
  if(typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('qaFacing'))
   addFacingDebug(root,layout,owned);
@@ -156,6 +161,11 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
  return {
   root,ceiling,colors:palette,paletteName:palette.name,
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
+  tick(dt){doors.update(dt);propStates.update(dt);},
+  setInteractionState(item,on){
+   if(item.kind==='door')return doors.setOpen(item.door.roomId,on);
+   return propStates.setState(item.prop?.id,on);
+  },
   dispose(){
     if(disposed)return;disposed=true;
     scene.remove(root);

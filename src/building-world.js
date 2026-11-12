@@ -30,6 +30,12 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
    const isStairs=y>.14&&y<building.levelHeight-.14;
    if(wasStairs!==isStairs)update();
   },
+  setInteractionState(item,on){
+   return levels[item.level]?.setInteractionState(item,on)??false;
+  },
+  tick(dt){
+   for(const layer of levels)if(layer.root.visible)layer.tick(dt);
+  },
   setFirstPerson(value){firstPerson=Boolean(value);update();},
   dispose(){
    if(disposed)return;disposed=true;

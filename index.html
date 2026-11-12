@@ -14,7 +14,7 @@
   <header class="topbar">
    <div class="brand">
     <div class="emblem"><span>V</span></div>
-    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 07</small></div>
+    <div><strong>VITAE<span>WORLD</span></strong><small>SPATIAL ARCHITECTURE / LAB 12</small></div>
    </div>
    <nav class="topControls" aria-label="Arayüz panelleri">
     <button id="toggleSettings" class="panelToggle" type="button" aria-controls="settingsPanel" aria-expanded="true">☷ <span>AYARLAR</span></button>
@@ -77,11 +77,20 @@
     <div class="kv"><span>CAMERA</span><b id="viewLabel">THIRD PERSON</b></div>
     <div class="kv"><span>CHARACTER</span><b id="avatarLabel">QUATERNIUS</b></div>
   </aside>
+  <div id="objectActionAnchor" class="objectActionAnchor" hidden>
+    <button id="useObject" class="objectActionButton" type="button"
+      aria-label="Yakındaki nesneyi kullan">
+      <span id="objectName">NESNE</span>
+      <strong id="objectVerb">KULLAN</strong>
+      <small class="objectKey">E</small>
+    </button>
+  </div>
   <div class="crosshair" aria-hidden="true"><i></i><i></i></div>
   <div class="bottomBar">
     <div class="hint"><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> MOVE
       <span class="separator">·</span><span class="kbd wide">SHIFT</span> SPRINT
       <span class="separator">·</span><span class="kbd">V</span> CAMERA
+      <span class="separator">·</span><span class="kbd">E</span> USE
       <span class="separator">·</span><span class="kbd">R</span> REGENERATE</div>
     <button id="capture">⊕ &nbsp; CAPTURE MOUSE</button>
   </div>

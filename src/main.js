@@ -6,6 +6,7 @@ import {buildBuildingWorld} from './building-world.js';
 import {CHARACTERS,addCharacter} from './assets.js';
 import {Controller} from './controls.js';
 import {initPanels} from './ui-panels.js';
+import {createInteractionSystem} from './interactions.js';
 
 const $=(selector)=>document.querySelector(selector);
 const canvas=$('#scene');
@@ -29,6 +30,7 @@ const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
 let seed='vitae-001',paletteIndex=0,characterIndex=0,buildingStyle='auto';
 let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
+let interactions=null,selectedInteraction=null,interactionFrames=0;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
 const clock=new THREE.Clock();
 let frames=0,lastFPS=0;
@@ -54,6 +56,9 @@ function generate(nextSeed){
  layout=building.stories[0].layout;shownLevel=0;
  const generation=++generationId;
  world?.dispose();
+ interactions=createInteractionSystem(building);
+ selectedInteraction=null;
+ $('#objectActionAnchor').hidden=true;
  totalAssets=building.stories.reduce((n,s)=>n+s.layout.props.length,0);loadedAssets=0;failedAssets=0;
  world=buildBuildingWorld(scene,building,paletteIndex,(ok)=>{
    if(generation!==generationId)return;
@@ -63,6 +68,7 @@ function generate(nextSeed){
  if(controller)controller.setLayout(building);
  else controller=new Controller(canvas,camera,building,avatar,$('#touchPad'),$('#thumb'));
  controller.setTouchSensitivity($('#touchSensitivity').value);
+ controller.setInteractionSystem(interactions);
  world.setCurrentLevel(0);
  world.setFirstPerson(controller.mode==='first');
  $('#seed').value=seed;
@@ -105,6 +111,65 @@ $('#touchSensitivity').addEventListener('input',e=>{
  controller?.setTouchSensitivity(multiplier);
 });
 $('#capture').addEventListener('click',()=>controller.capture());
+const objectLabel=$('#objectName'),objectVerb=$('#objectVerb');
+const objectButton=$('#useObject'),objectAnchor=$('#objectActionAnchor');
+const worldTarget=new THREE.Vector3();
+function updateActionTarget(){
+ if(!interactions||!controller||!world){
+  objectAnchor.hidden=true;return;
+ }
+ const chosen=interactions.select({
+  x:controller.position.x,z:controller.position.z,
+  yaw:controller.yaw,level:controller.level,
+  previousId:selectedInteraction?.id
+ });
+ selectedInteraction=chosen;
+ if(!chosen){objectAnchor.hidden=true;return;}
+ objectLabel.textContent=chosen.label.toUpperCase();
+ objectVerb.textContent=interactions.actionName(chosen);
+ objectButton.setAttribute('aria-label',
+  chosen.label+': '+interactions.actionName(chosen));
+ worldTarget.set(chosen.x,chosen.y+Math.min(.33,chosen.h*.15),chosen.z);
+ worldTarget.project(camera);
+ const poseActive=interactions.activePose?.id===chosen.id;
+ const behind=worldTarget.z>=1||worldTarget.z<=-1;
+ if(behind&&!poseActive){
+  objectAnchor.hidden=true;return;
+ }
+ // Reposition a real DOM control at the projected world-space object,
+ // rather than making the user guess which nearby item a generic UI uses.
+ const width=window.innerWidth,height=window.innerHeight;
+ const x=behind?width*.5:(worldTarget.x*.5+.5)*width;
+ const y=behind?height*.65:(-worldTarget.y*.5+.5)*height;
+ if(x<0||x>width||y<0||y>height){
+  if(!interactions.activePose){
+   objectAnchor.hidden=true;return;
+  }
+ }
+ const safeX=Math.max(75,Math.min(width-75,x));
+ const safeY=Math.max(87,Math.min(height-(width<=800?133:64),y));
+ objectAnchor.style.left=safeX+'px';
+ objectAnchor.style.top=safeY+'px';
+ objectAnchor.hidden=false;
+}
+function useSelected(){
+ if(!selectedInteraction||!interactions)return;
+ const result=interactions.perform(selectedInteraction,{
+  x:controller.position.x,z:controller.position.z,
+  level:controller.level
+ });
+ if(!result.ok){
+  if(result.reason==='doorway-occupied')
+   objectVerb.textContent='ÖNÜNÜ BOŞALT';
+  return;
+ }
+ if(result.pose==='enter')controller.startPose(result.value);
+ else if(result.pose==='exit')controller.endPose();
+ else if(result.item)world?.setInteractionState(result.item,result.on);
+ drawMap();
+ updateActionTarget();
+}
+objectButton.addEventListener('click',e=>{e.stopPropagation();useSelected();});
 $('#character').addEventListener('click',()=>{
  characterIndex=(characterIndex+1)%CHARACTERS.length;
  createAvatar();
@@ -117,6 +182,10 @@ document.addEventListener('keydown',e=>{
  if(e.target instanceof HTMLInputElement)return;
  if(e.code==='KeyV'){e.preventDefault();toggleView();}
  if(e.code==='KeyR'){e.preventDefault();generate(newSeed());}
+ if(e.code==='KeyE'&&!e.repeat){e.preventDefault();useSelected();}
+ if(e.code==='Escape'&&controller?.pose){
+  interactions?.clearPose();controller.endPose();updateActionTarget();
+ }
 });
 const map=$('#minimap'),ctx=map.getContext('2d');
 const cellSize=Math.min((map.width-16)/GRID_W,(map.height-16)/GRID_H);
@@ -169,7 +238,8 @@ function drawMap(){
  }
  for(const d of layout.doors){
    const p=mapPoint(d.x,d.z);
-   ctx.strokeStyle='#ddfff0';ctx.lineWidth=2.4;
+   ctx.strokeStyle=interactions?.state({id:shownLevel+':door:'+d.roomId})?
+    '#8df9bf':'#ddc69c';ctx.lineWidth=2.4;
    ctx.beginPath();
    if(d.axis==='x'){ctx.moveTo(p.x-7,p.y);ctx.lineTo(p.x+7,p.y);}
    else{ctx.moveTo(p.x,p.y-7);ctx.lineTo(p.x,p.y+7);}
@@ -205,13 +275,16 @@ function loop(){
  const dt=clock.getDelta();
  if(document.hidden)return;
  controller.update(dt);
+ world?.tick(dt);
  world?.setPlayerHeight(controller.position.y);
+ if(++interactionFrames%3===0)updateActionTarget();
  if(controller.level!==shownLevel){
   shownLevel=controller.level;
   layout=building.stories[shownLevel].layout;
   world.setCurrentLevel(shownLevel);
   $('#floorValue').textContent=(shownLevel+1)+' / '+building.stories.length;
   drawMap();updateLocation();
+  updateActionTarget();
  }
  frames++;lastFPS+=dt;
  if(lastFPS>0.5){
