@@ -2,31 +2,60 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {modelYawCorrection} from './orientation.js';
+import {createModelQueue} from './model-queue.js';
 
-// Asset files stay external in this early lab. Every URL is pinned to an audited revision.
-// All the assets below have explicit CC0 provenance in ASSETS.md.
+// Build-time vendor in public/models: all furniture, fixtures and avatars
+// are same-origin in production. Revision-pinned CC0 source remains only a
+// contingency for local development without npm run models:sync.
 const KENNEY_REV='3ddcc695adbba9fb918cf31b7c139b3f95b76910';
 const QUATERNIUS_REV='a488723e3a93d73d5c562d88f8a85353c37bc721';
 const KAYKIT_REV='8bf8d835cb7afa7cb3f4d893b0966c6b4e9b7727';
-export const FURNITURE_BASE=`https://raw.githubusercontent.com/Hidencod/tge-assets/${KENNEY_REV}/packs/furniture-kit/`;
+const REMOTE_FURNITURE=`https://raw.githubusercontent.com/Hidencod/tge-assets/${KENNEY_REV}/packs/furniture-kit/`;
+const base=(import.meta.env?.BASE_URL||'/vitaeworld/').replace(/\\?\/?$/,'/');
+export const FURNITURE_BASE=base+'models/furniture/';
 export const CHARACTERS=[
  {id:'hero',label:'QUATERNIUS',description:'Stylized humanoid (CC0)',
-  url:`https://raw.githubusercontent.com/programasweights/avatar/${QUATERNIUS_REV}/public/assets/character.glb`,
+  url:base+'models/avatars/hero.glb',
+  source:`https://raw.githubusercontent.com/programasweights/avatar/${QUATERNIUS_REV}/public/assets/character.glb`,
   facing:0},
  {id:'rogue',label:'KAYKIT',description:'Animated stylized adventurer (CC0)',
-  url:`https://raw.githubusercontent.com/sion-rgb/tactical-slash/${KAYKIT_REV}/assets/characters/player/player_archer.glb`,
+  url:base+'models/avatars/rogue.glb',
+  source:`https://raw.githubusercontent.com/sion-rgb/tactical-slash/${KAYKIT_REV}/assets/characters/player/player_archer.glb`,
   facing:Math.PI}
 ];
 const loader=new GLTFLoader();
-const cache=new Map();
-export function loadGLB(url) {
- if(!cache.has(url)){
-   const task=loader.loadAsync(url).catch((error)=>{
-     cache.delete(url); throw error;
-   });
-   cache.set(url,task);
+async function downloadGLB(url){
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),url.startsWith('http')?20000:11000);
+ try{
+  const response=await fetch(url,{signal:controller.signal});
+  if(!response.ok){
+   const error=Error('HTTP '+response.status+' '+url);
+   error.status=response.status;throw error;
+  }
+  return await response.arrayBuffer();
+ }finally{clearTimeout(timeout);}
+}
+async function parseGLB(bytes,url){
+ const basePath=url.slice(0,url.lastIndexOf('/')+1);
+ return await loader.parseAsync(bytes,basePath);
+}
+const queue=createModelQueue({
+ fetchBuffer:downloadGLB,parseBuffer:parseGLB,
+ maxConcurrent:6,retries:2,
+ report:result=>{
+  if(!result.ok)console.warn('CC0 model could not be loaded:',result.primary,result.error);
+  else if(result.fallback)console.info('CC0 model loaded from pinned mirror:',result.primary);
  }
- return cache.get(url);
+});
+export function modelLoadMetrics(){return {
+ ...queue.metrics,errors:queue.metrics.errors.slice()
+};}
+export function loadGLB(url) {
+ const fallback=url.startsWith(FURNITURE_BASE)?
+  REMOTE_FURNITURE+url.slice(FURNITURE_BASE.length):
+  CHARACTERS.find(c=>c.url===url)?.source||null;
+ return queue.load(url,fallback);
 }
 function markShared(node) {
  node.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;o.userData.sharedAsset=true;}});
