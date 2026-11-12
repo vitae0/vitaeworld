@@ -143,3 +143,12 @@ test('hotel signage numbers uniquely identify floor and room',()=>{
   assert.ok(s.label.startsWith('ODA '+String(s.floor+1)));
  }
 });
+
+test('cafe must keep its entire public room reachable with required furniture',()=>{
+ const building=generateBuilding('certify-coffee_shop','auto',2,'coffee_shop','auto');
+ const audit=auditBuildingInteriors(building);
+ const inaccessible=audit.floors.flatMap(f=>f.issues.filter(
+  i=>i.type==='room-inaccessible'));
+ assert.deepEqual(inaccessible,[],
+  'required table/chairs may not turn a cafe into an inaccessible maze');
+});
