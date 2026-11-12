@@ -1,24 +1,25 @@
 import {buildWorld} from './world.js';
 import {buildStairVisuals} from './stair-visuals.js';
+import {floorVisibilityPlan} from './floor-visibility.js';
 
 // The old single-story renderer remains reusable and separately testable.
 export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{}){
  const levels=building.stories.map(story=>{
-  const layer=buildWorld(scene,story.layout,paletteIndex,onAsset);
+  const layer=buildWorld(scene,story.layout,paletteIndex,onAsset,{
+   detachedFloor:story.index>0
+  });
   layer.root.position.y=story.elevation;
+  if(layer.detachedFloor)layer.floorDeck.position.y=story.elevation;
   return layer;
  });
  const stairs=buildStairVisuals(scene,building);
  let current=0,firstPerson=false,disposed=false,playerY=0;
  function update(){
+  const states=floorVisibilityPlan(building,current,firstPerson,playerY);
   levels.forEach((layer,i)=>{
-   // Keep adjacent floors visible during climbing, but do not let lower
-   // ceilings mask the player while exploring upper floors.
-   const onStairs=building.stairs.some(s=>playerY>
-    s.from*building.levelHeight+.14&&playerY<
-    s.to*building.levelHeight-.14);
-   layer.root.visible=i===current||onStairs;
-   layer.ceiling.visible=firstPerson&&(i===current||onStairs);
+   layer.root.visible=states[i].rooms;
+   layer.floorDeck.visible=states[i].deck;
+   layer.ceiling.visible=states[i].ceiling;
   });
  }
  update();

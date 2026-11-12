@@ -3,7 +3,7 @@ import {TILE,GRID_W,GRID_H,seededRandom,worldCell} from './topology.js';
 import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
 import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from './interior-quality.js';
 import {polishFurnitureOrientations} from './orientation-pass.js';
-import {learnedPlacementBonus} from './learned-layout.js';
+import {blocksWindow} from './placement-constraints.js';
 
 
 // Room identity constrains optional furnishing. Shared traits such as "modern"
@@ -125,7 +125,7 @@ function candidatePositions(room,a,others,layout){
  }
  return result;
 }
-function fits(room,p,others,door,layout,rug){
+function fits(room,p,others,door,layout,rug,a){
  const pad=.12;
  if(p.x-p.w/2<room.xMin+pad||p.x+p.w/2>room.xMax-pad||
     p.z-p.d/2<room.zMin+pad||p.z+p.d/2>room.zMax-pad)return false;
@@ -164,6 +164,10 @@ function fits(room,p,others,door,layout,rug){
     if(u>=0&&v>=0&&u+v<cut.cut+.13)return false;
    }
  }
+ // Tall bookcases, wardrobes and freestanding storage must never cover
+ // actual daylight apertures. This is a hard geometrical rule, not another
+ // learned coordinate prior that might disturb otherwise good placements.
+ if(blocksWindow(layout,room,a,p))return false;
  if(rug)return !others.some(q=>q.role==='rug'&&footprintOverlap(p,q,.18));
  // A decorative model is still a physical mesh. Non-solid objects cannot
  // float inside a sofa simply because they are not movement obstacles.
@@ -226,7 +230,7 @@ export function populateRooms(layout,seed=layout.seed){
      return false;
     const candidates=[];
     for(const p of candidatePositions(room,a,objects,layout)){
-     if(!fits(room,p,objects,door,layout,a.role==='rug'))continue;
+     if(!fits(room,p,objects,door,layout,a.role==='rug',a))continue;
      const positional=locationScore(a,room,p,objects,door,layout);
      const matches=objects.filter(q=>q.role===companion(a));
      const companionFit=matches.length?clamp(1-Math.abs(Math.min(...matches.map(q=>distance(q,p)))-ideal(a))/3):0;
@@ -263,7 +267,7 @@ export function populateRooms(layout,seed=layout.seed){
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+architectural+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+
-       learnedPlacementBonus(room,a,p)+rng()*.004;
+       rng()*.004;
      candidates.push({p,score,locationScore:positional});
     }
     if(!candidates.length)return false;
@@ -375,6 +379,10 @@ export function populateRooms(layout,seed=layout.seed){
  layout.props=placed.filter(p=>!p._removed);
  layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
    ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
+ // Restore the pre-training semantic heuristic as the *active* placer.
+ // The fitted dataset and model remain in the repository for offline
+ // experiments but cannot override the proven earlier placement behaviour.
+ layout.placementMethod='semantic-rules-v2';
  layout.orientationReport=polishFurnitureOrientations(layout);
  layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
    ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];

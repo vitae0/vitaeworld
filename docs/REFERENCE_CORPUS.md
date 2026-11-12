@@ -122,3 +122,13 @@ Only that model and attribution ship to the browser.
 The metric measures statistical fit for source-layout object positions.
 It is **not** a measured improvement in gameplay, player preference or
 photorealism. Stronger claims require a controlled blind comparison.
+
+## Lab 15 gameplay model status
+
+The FloorplanQA statistical prior is genuine data-trained work and
+its files and held-out metrics remain archived for comparison. However,
+**the actual game no longer applies its candidate-placement score**.
+Production furnishing once again uses only the older semantic and
+geometric rules, now strengthened with a tall-furniture/window
+occlusion constraint. Do not describe the trained model as active in
+the live game as of Lab 15.

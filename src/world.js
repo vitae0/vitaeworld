@@ -14,10 +14,15 @@ const PALETTES=[
  {name:'Nocturne',wall:0xddd6d1,trim:0x575052,floor:0x8b7f82,hall:0x686065,light:0xffcda9},
  {name:'Solstice',wall:0xe5e4d8,trim:0x586c5b,floor:0x9aa08c,hall:0x747e71,light:0xffe5ba}
 ];
-export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
+export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}) {
  const palette=PALETTES[paletteIndex%PALETTES.length];
  const root=new THREE.Group();root.name='ProceduralBuilding';
  scene.add(root);
+ // Keep the upstairs floor slab independently renderable from downstairs.
+ // All other upstairs geometry can still be culled by the story controller.
+ const floorDeck=new THREE.Group();floorDeck.name='StructuralFloorDeck';
+ const detachedFloor=Boolean(options.detachedFloor);
+ (detachedFloor?scene:root).add(floorDeck);
  const ceiling=new THREE.Group();ceiling.name='CeilingOcclusionLayer';root.add(ceiling);
  const owned=new Set();
  const tmp=new THREE.Object3D();
@@ -73,7 +78,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
   });
   floors.instanceMatrix.needsUpdate=true;
   if(floors.instanceColor)floors.instanceColor.needsUpdate=true;
-  root.add(floors);
+  floorDeck.add(floors);
  }
  const roofCells=layout.floors.filter(c=>!layout.ceilingHoles?.has(c.gz*GRID_W+c.gx));
  const roof=new THREE.InstancedMesh(geometry(TILE+.02,.13,TILE+.02),ceilingMat,roofCells.length);
@@ -187,7 +192,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
   addFacingDebug(root,layout,owned);
  let disposed=false;
  return {
-  root,ceiling,colors:palette,paletteName:palette.name,
+  root,floorDeck,detachedFloor,ceiling,colors:palette,paletteName:palette.name,
   setDaylight,
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
   tick(dt){doors.update(dt);propStates.update(dt);},
@@ -198,6 +203,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
   dispose(){
     if(disposed)return;disposed=true;
     scene.remove(root);
+    if(detachedFloor)scene.remove(floorDeck);
     for(const resource of owned)resource.dispose();
     // Remote GLB buffers are intentionally cache-owned, not world-owned.
   }
