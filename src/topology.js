@@ -159,7 +159,7 @@ function topologicalGrid(rng,style){
  // Assign wide, furniture-heavy functions to naturally spacious parcels.
  // Purely shuffling room labels can put a dining table into a narrow L-shaped
  // passage even when an adjacent room is much more suitable.
- const chosen=shuffle(Object.keys(ROOM_TYPES),rng),rooms=[];
+ const chosen=shuffle(Object.keys(ROOM_TYPES).filter(key=>!ROOM_TYPES[key].circulation),rng),rooms=[];
  const selected=Array.from({length:roomsCells.length},(_,i)=>chosen[i%chosen.length]);
  const demand={dining:10,lounge:9,kitchen:8,suite:7,games:6,
    studio:5,library:4,wellness:3,office:2,gallery:1,bath:0};

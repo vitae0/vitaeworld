@@ -1,4 +1,4 @@
-# VitaeWorld | Architecture Lab 04
+# VitaeWorld | Architecture Lab 07
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
@@ -25,6 +25,51 @@ The floor plan uses a 25×19 occupancy grid of 1.3m cells. Room splitting valida
 61 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
+
+## Lab 07 — First-class corridors and connected storeys
+
+The playable prototype now calls `generateBuilding(seed,style,2)` instead of
+building only one floor. The original `generateLayout` remains available as a
+standalone *single-floor* grammar (and for existing regression tests).
+
+### 1. Corridors are rooms
+
+`src/circulation.js` partitions the connected public circulation network
+into actual `Room` records with unique floor-local IDs, `corridor`, `lobby`
+and `landing` semantic room types, occupied cells, floor index, area,
+decorations and a visual identity. Corridor floors reference those room IDs
+directly in the minimap and scene. The old `grid===0` routing mask remains
+intact for the doorway and wall solver, while `zoneGrid` is the canonical
+room lookup used by the HUD and decoration engine. No walls are erected
+between two adjacent passage zones.
+
+Circulation rooms get wall art, sconces, shelves and lightweight runner
+rugs. Their walking zones contain **no solid floor furniture**, and door/
+stair approaches cannot receive rugs.
+
+### 2. Two storeys with real stairs
+
+`src/building.js` creates two furnished, independently seeded storeys
+using the same architectural family and connected corridor backbone.
+`src/stairs.js` selects a seven-cell straight hallway flight with safe
+approaches, reserves a matching shaft, and supplies a continuous ramp
+height field. `src/stair-visuals.js` draws twenty treads plus side rails.
+
+The lower ceiling and upper floor are cut at the flight. Player movement
+uses the ramp ground height and floor-specific collision masks, so walking
+forward genuinely climbs to the next level and walking back descends.
+The player starts on the lower landing; the HUD and minimap automatically
+switch floor when climbing. Keyboard and touch joystick use the same logic.
+
+A one-storey building is still supported through
+`generateBuilding(seed,style,1)`. More than two floors require a future
+stacked or alternate-flight stairwell design; they are intentionally not
+silently generated on top of the same flight.
+
+`tests/building.test.mjs` covers hallway room IDs and semantics, shaft
+holes, landing access, and continuous ascent/descent for every architecture
+style. Actual browser visual inspection of imported assets and mobile frame
+times is still separate from geometric unit tests.
 
 ## Interior character pass (Lab 06)
 

@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import {generateLayout,GRID_W,GRID_H,TILE,worldCell} from './layout.js';
+import {GRID_W,GRID_H,TILE,worldCell} from './layout.js';
+import {generateBuilding} from './building.js';
 import {ROOM_TYPES} from './semantics.js';
-import {buildWorld} from './world.js';
+import {buildBuildingWorld} from './building-world.js';
 import {CHARACTERS,addCharacter} from './assets.js';
 import {Controller} from './controls.js';
 
@@ -18,7 +19,8 @@ scene.background=new THREE.Color(0x08151d);
 scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
 let seed='vitae-001',paletteIndex=0,characterIndex=0,buildingStyle='auto';
-let layout=generateLayout(seed,buildingStyle),world=null,controller=null,avatar=null;
+let building=generateBuilding(seed,buildingStyle),layout=building.stories[0].layout;
+let world=null,controller=null,avatar=null,shownLevel=0;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
 const clock=new THREE.Clock();
 let frames=0,lastFPS=0;
@@ -40,22 +42,25 @@ function createAvatar(){
 }
 function generate(nextSeed){
  seed=String(nextSeed).trim()||'vitae-001';
- layout=generateLayout(seed,buildingStyle);
+ building=generateBuilding(seed,buildingStyle);
+ layout=building.stories[0].layout;shownLevel=0;
  const generation=++generationId;
  world?.dispose();
- totalAssets=layout.props.length;loadedAssets=0;failedAssets=0;
- world=buildWorld(scene,layout,paletteIndex,(ok)=>{
+ totalAssets=building.stories.reduce((n,s)=>n+s.layout.props.length,0);loadedAssets=0;failedAssets=0;
+ world=buildBuildingWorld(scene,building,paletteIndex,(ok)=>{
    if(generation!==generationId)return;
    if(ok)loadedAssets++;else failedAssets++;
    updateProgress();
  });
- if(controller)controller.setLayout(layout);
- else controller=new Controller(canvas,camera,layout,avatar,$('#touchPad'),$('#thumb'));
+ if(controller)controller.setLayout(building);
+ else controller=new Controller(canvas,camera,building,avatar,$('#touchPad'),$('#thumb'));
+ world.setCurrentLevel(0);
  world.setFirstPerson(controller.mode==='first');
  $('#seed').value=seed;
  $('#seedText').textContent=seed.toUpperCase();
- $('#roomTotal').textContent=layout.rooms.length;
- $('#propTotal').textContent=layout.props.length+(layout.decorations?.length||0);
+ $('#roomTotal').textContent=building.rooms.length;
+ $('#floorValue').textContent='1 / '+building.stories.length;
+ $('#propTotal').textContent=building.stories.reduce((n,s)=>n+s.layout.props.length+(s.layout.decorations?.length||0),0);
  $('#layoutStatus').textContent=layout.buildingType.toUpperCase();
  $('#buildingName').textContent=layout.buildingName.toUpperCase();
  $('#paletteName').textContent=world.paletteName.toUpperCase();
@@ -140,6 +145,14 @@ function drawMap(){
    // 16 compact rooms need concise IDs; full names remain in the status card.
    ctx.fillText(String(room.id).padStart(2,'0'),center.x,center.y,23);
  }
+ for(const stair of building.stairs){
+  const a=mapPoint(stair.start.x,stair.start.z);
+  const b=mapPoint(stair.end.x,stair.end.z);
+  ctx.strokeStyle='#ffe4a1';ctx.lineWidth=2.8;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  ctx.fillStyle='#ffe4a1';ctx.font='bold 9px system-ui';
+  ctx.fillText('STAIRS',((a.x+b.x)/2),((a.y+b.y)/2)-6);
+ }
  for(const d of layout.doors){
    const p=mapPoint(d.x,d.z);
    ctx.strokeStyle='#ddfff0';ctx.lineWidth=2.4;
@@ -160,9 +173,9 @@ function updateLocation(){
  const p=controller.position;
  const {gx,gz}=worldCell(p.x,p.z);
  const id=gx>=0&&gx<GRID_W&&gz>=0&&gz<GRID_H?
-   layout.grid[gz*GRID_W+gx]:-1;
+   (layout.zoneGrid||layout.grid)[gz*GRID_W+gx]:-1;
  const room=layout.rooms.find(r=>r.id===id);
- $('#currentRoom').textContent=room?room.name.toUpperCase():'SERPENTINE HALL';
+ $('#currentRoom').textContent=room?room.name.toUpperCase():'OPEN SPACE';
  const traits=$('#roomTraits');
  if(traits){
    traits.textContent=room
@@ -178,6 +191,13 @@ function loop(){
  const dt=clock.getDelta();
  if(document.hidden)return;
  controller.update(dt);
+ if(controller.level!==shownLevel){
+  shownLevel=controller.level;
+  layout=building.stories[shownLevel].layout;
+  world.setCurrentLevel(shownLevel);
+  $('#floorValue').textContent=(shownLevel+1)+' / '+building.stories.length;
+  drawMap();updateLocation();
+ }
  frames++;lastFPS+=dt;
  if(lastFPS>0.5){
   $('#fps').textContent=Math.round(frames/lastFPS)+' FPS';

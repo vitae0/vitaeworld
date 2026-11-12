@@ -26,6 +26,14 @@ function room(name,color,traits,required,capacity=8) {
 }
 // The six chosen room types vary by seed. The pool of ten is extensible.
 export const ROOM_TYPES=Object.freeze({
+ // Circulation shares the same room schema and thematic decor vocabulary.
+ corridor:Object.freeze({...room('Passage Gallery','#cab8a0',
+   {openness:3,social:2,illumination:3,display:2,compact:2,quiet:1},[],0),circulation:true}),
+ lobby:Object.freeze({...room('Welcome Lobby','#d4bea5',
+   {social:2,openness:3,display:2,illumination:3,premium:2},[],0),circulation:true}),
+ landing:Object.freeze({...room('Stair Landing','#b5c4bb',
+   {openness:3,social:2,illumination:3,compact:2},[],0),circulation:true}),
+
  suite:room('Sky Suite','#b6bce9',
   {sleep:3,recovery:3,privacy:3,quiet:3,warm:2,soft:3,premium:2,contemporary:2,storage:1,illumination:1},
   ['beddouble','sidetabledrawers','lampsquaretable'],7),
