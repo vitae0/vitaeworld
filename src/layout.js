@@ -5,6 +5,7 @@ import {generateDecorations} from './decor.js';
 import {pickBestTopology} from './plan-score.js';
 import {resolveInteriorStyle} from './style-families.js';
 import {assignRoomArchetypes,roomGenerationReport} from './room-archetypes.js';
+import {generateWallFeatures,wallFeatureReport} from './wall-features.js';
 export {TILE,GRID_W,GRID_H,WALL_HEIGHT,BUILDING_TYPES,BUILDING_TYPE_IDS,cellWorld,worldCell,
   isWalkable,seededRandom} from './topology.js';
 export {ROOM_NAMES,ROOM_THEMES} from './semantics.js';
@@ -24,6 +25,8 @@ export function generateLayout(seed='vitae-001',type='auto',program=null,interio
  const furnished=populateRooms(layout,String(seed));
  furnished.decorations=generateDecorations(furnished,String(seed));
  furnished.qualityReport.decorations=furnished.decorations.length;
- furnished.styleReport=roomGenerationReport(furnished);
+ furnished.wallFeatures=generateWallFeatures(furnished);
+ furnished.styleReport={...roomGenerationReport(furnished),
+  wallTreatments:wallFeatureReport(furnished)};
  return furnished;
 }
