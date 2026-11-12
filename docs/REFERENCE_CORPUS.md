@@ -54,3 +54,44 @@ plus optional in-scene directional QA. These changes improve actual
 asset placement without pretending that an unsupported neural model has
 been trained. Vetted external floorplan training remains a separate,
 uncompleted milestone.
+
+## V0.3: Actual downloaded training data, reproducible conditional model
+
+The first trainable corpus is [FloorplanQA-Layouts](https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts).
+It is published under **CC BY 4.0** by Rodionov, Eldesokey, Birsak,
+Femiani, Ghanem and Wonka (FloorplanQA, ICML 2026).
+
+The dataset has 2,000 structured room layouts. Only the **1,800 synthetic
+bedrooms, kitchens and living rooms** are eligible for the first
+training run; the other 200 HSSD-derived samples are *explicitly excluded*
+pending any additional upstream asset review. There is no redistribution
+of individual original layout JSONs or images in our game.
+
+- Downloader: `scripts/train-layout-priors.py` uses Hugging Face's
+  documented dataset viewer `/splits` and `/rows` endpoints.
+- Model: three-component diagonal **Gaussian mixture** fitted by
+  expectation-maximization in plain Python. Conditioned on
+  `room category | furniture role`, predicting normalized relative
+  object centroid `x,z`.
+- Train/test split: deterministic SHA-256 room ID hash (80/20).
+  No object from a held-out room enters the corresponding train subset.
+- Artifact: `model/layout-priors.json`; report:
+  `model/layout-metrics.json`; updated from the training workflow.
+- Runtime: `src/learned-layout.js` gives a bounded bonus of at most
+  +0.24/-0.22 to legal candidate positions. Existing room boundaries,
+  doorway clearance, collision avoidance and navigation conditions
+  remain stronger.
+- This is genuinely **trained statistical machine learning**,
+  not an image-generating model or a full conditional neural architect.
+  It learns preferred placement zones, **not** window styles, room
+  connectivity or exact orientation of imported GLBs.
+- Original-data provenance:
+  https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts
+- API documentation:
+  https://huggingface.co/docs/dataset-viewer/quick_start
+
+To reproduce: `python3 scripts/train-layout-priors.py --strict` from
+the repository root with network access. The `train-layout-priors`
+GitHub Actions job performs the same calculation, commits the compact
+model/metrics files to its feature branch and publishes a CI log.
+Only that model and attribution ship to the browser.
