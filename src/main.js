@@ -12,6 +12,7 @@ import {Controller} from './controls.js';
 import {initPanels} from './ui-panels.js';
 import {createInteractionSystem} from './interactions.js';
 import {daylightAt,normalizeHour} from './daylight.js';
+import {PERFORMANCE_MODES,qualityBudget,adaptivePixelRatio} from './performance-budget.js';
 
 const $=(selector)=>document.querySelector(selector);
 const canvas=$('#scene');
@@ -51,7 +52,20 @@ initPanels({
  documentRef:document
 });
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<700?1.15:1.6));
+const performanceSelect=$('#performanceMode');
+let performanceMode='auto';
+try{
+ const stored=localStorage.getItem('vitaeworld:performance-mode');
+ if(PERFORMANCE_MODES.includes(stored))performanceMode=stored;
+}catch{}
+performanceSelect.value=performanceMode;
+const device=()=>({width:window.innerWidth,
+ devicePixelRatio:window.devicePixelRatio||1,
+ deviceMemory:navigator.deviceMemory||8});
+let budget=qualityBudget(performanceMode,device());
+let pixelState={current:budget.pixelRatio,minimum:budget.minimumPixelRatio,
+ maximum:budget.pixelRatio,lowSamples:0,highSamples:0};
+renderer.setPixelRatio(budget.pixelRatio);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.18;
@@ -114,10 +128,28 @@ timeAuto.addEventListener('click',()=>{
  timeAuto.setAttribute('aria-label',daylightAutomatic?
   'Gün-gece döngüsünü durdur':'Gün-gece döngüsünü başlat');
 });
+function applyQualityBudget(){
+ budget=qualityBudget(performanceMode,device());
+ pixelState={current:budget.pixelRatio,minimum:budget.minimumPixelRatio,
+  maximum:budget.pixelRatio,lowSamples:0,highSamples:0};
+ renderer.setPixelRatio(pixelState.current);
+ world?.setQualityBudget(budget);
+ $('#performanceInfo').textContent=budget.selected.toUpperCase()+
+  ' · '+budget.pixelRatio.toFixed(2)+'× DPI · '+budget.practicalLights+
+  ' ODA IŞIĞI'+(budget.showClutter?'':' · SADE DEKOR');
+}
+performanceSelect.addEventListener('change',e=>{
+ performanceMode=PERFORMANCE_MODES.includes(e.currentTarget.value)?
+  e.currentTarget.value:'auto';
+ try{localStorage.setItem('vitaeworld:performance-mode',performanceMode);}
+ catch{}
+ applyQualityBudget();
+});
 function resize(){
  const w=window.innerWidth,h=window.innerHeight;
  camera.aspect=w/h;camera.updateProjectionMatrix();
  renderer.setSize(w,h,false);
+ applyQualityBudget();
 }
 window.addEventListener('resize',resize);resize();
 function createAvatar(){
@@ -148,6 +180,7 @@ function generate(nextSeed){
    if(ok)loadedAssets++;else failedAssets++;
    updateProgress();
  });
+ world.setQualityBudget(budget);
  if(controller)controller.setLayout(building);
  else controller=new Controller(canvas,camera,building,avatar,$('#touchPad'),$('#thumb'));
  controller.setTouchSensitivity($('#touchSensitivity').value);
@@ -174,7 +207,13 @@ function generate(nextSeed){
  const styleStatus=$('#styleStatistics');
  if(styleStatus)styleStatus.textContent=styles.reduce((n,s)=>n+s.wallTreatments.total,0)+
   ' DUVAR DETAYI · '+styles.reduce((n,s)=>n+s.completedEnsembles,0)+
-  ' ODA GRUBU · TÜM KATLAR AÇIK';
+  ' ODA GRUBU · '+building.interiorAudit.finishParts+
+  ' MİMARİ BİTİŞ · TÜM KATLAR AÇIK';
+ const audit=building.interiorAudit;
+ $('#interiorQuality').textContent=
+  audit.passed?'PASS · '+audit.score+'/100':
+  'DENETİM · '+audit.score+'/100 · '+
+    audit.floors.reduce((n,f)=>n+f.issues.length,0)+' BULGU';
  updateProgress();
  drawMap();
 }
@@ -432,7 +471,18 @@ function loop(){
  }
  frames++;lastFPS+=dt;
  if(lastFPS>0.5){
-  $('#fps').textContent=Math.round(frames/lastFPS)+' FPS';
+  const measured=frames/lastFPS;
+  $('#fps').textContent=Math.round(measured)+' FPS';
+  if(performanceMode==='auto'){
+   const next=adaptivePixelRatio({...pixelState,fps:measured,
+    targetFps:budget.targetFps});
+   pixelState={...pixelState,...next};
+   if(next.changed){
+    renderer.setPixelRatio(pixelState.current);
+    $('#performanceInfo').textContent=budget.selected.toUpperCase()+
+     ' · ADAPTİF '+pixelState.current.toFixed(2)+'× DPI';
+   }
+  }
   lastFPS=0;frames=0;drawMap();updateLocation();
  }
  renderer.render(scene,camera);
