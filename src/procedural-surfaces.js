@@ -4,7 +4,7 @@ export const PROCEDURAL_SURFACES=Object.freeze([
  'polishedConcrete','microcement','darkOak','walnut','lightParquet',
  'herringbone','blackMarble','travertine','terrazzo','industrialEpoxy',
  'rustMetal','agedTile','smoothWhite','warmPlaster','greige',
- 'charcoalPanel','woodSlat','rawConcrete','darkBrick','limewash',
+ 'charcoalPanel','woodSlat','rawConcrete','darkBrick','limewash','agedPlaster',
  'matteWhite','acoustic','darkCeiling','brushedSteel','darkMetal','lightOak'
 ]);
 const types=new Set(PROCEDURAL_SURFACES);
@@ -56,13 +56,15 @@ export function proceduralSurfaceColor(kind,x,y){
   const bolts=((px%85)<3||(py%85)<3)?-29:0;
   r=137+v+stain+scratch+bolts;g=76+v*.65+stain*.48+bolts;
   b=50+v*.5+stain*.36+bolts;
- }else if(['smoothWhite','warmPlaster','greige','limewash','matteWhite'].includes(kind)){
+ }else if(['smoothWhite','warmPlaster','greige','limewash','matteWhite','agedPlaster'].includes(kind)){
   const base=kind==='smoothWhite'?[231,232,227]:
    kind==='matteWhite'?[227,228,222]:
    kind==='warmPlaster'?[217,199,178]:
-   kind==='limewash'?[213,204,183]:[186,177,163];
+   kind==='limewash'?[213,204,183]:
+   kind==='agedPlaster'?[161,141,119]:[186,177,163];
   const wash=kind==='limewash'?Math.sin(x*.026+y*.012)*7:
-   kind==='warmPlaster'?fine*1.3:0;
+   kind==='warmPlaster'?fine*1.3:
+   kind==='agedPlaster'?(noise(x>>4,y>>4)-.5)*28+fine*1.2:0;
   r=base[0]+v*.35+wash;g=base[1]+v*.35+wash;
   b=base[2]+v*.35+wash;
  }else if(['charcoalPanel','woodSlat','darkBrick','acoustic','darkCeiling'].includes(kind)){
