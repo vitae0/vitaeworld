@@ -40,7 +40,7 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2,programId=
   layout.wallFeatures=generateWallFeatures(layout);
   // Recalculate ceiling details after stair cutouts and corridor promotion.
   layout.fitout=makeInteriorFitout(layout,layout.seed);
-  layout.signage=generateRoomSignage(layout);
+  layout.signage=generateRoomSignage(layout,story.index);
   layout.interiorAudit=auditInterior(layout);
   layout.styleReport={...roomGenerationReport(layout),
    wallTreatments:wallFeatureReport(layout),
