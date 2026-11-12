@@ -21,3 +21,22 @@ Runtime GLB URLs are revision-pinned in `src/assets.js`. The two current avatar 
 - Some GLB conversions may differ in dimensions or materials from official pack exports. Use `src/assets.js`'s bounding-box scaling and keep the procedural fallback visible when a request fails.
 
 **Licensing verification date:** 2026-11-10.
+
+## First-party runtime texture pipeline
+
+Four surface families use **Poly Haven CC0 materials** during GitHub Pages
+builds: White Plaster 02, Wood Planks, Tiled Floor 001 and Fabric Pattern 05.
+See `scripts/sync-textures.mjs`, which uses the official
+[Poly Haven API](https://api.polyhaven.com) to resolve **1K JPEG**
+diffuse, OpenGL normal and roughness maps, validates each download, computes
+SHA-256 checksums and records URLs in `public/textures/sources.json`.
+
+- Run `npm run textures:sync` before `npm run build`; deployment and
+  validation workflows run this automatically.
+- Missing downloads fall back to four locally generated patterned textures.
+  The game therefore still works offline and when the API/CDN is unreachable.
+- Files downloaded during CI are included in the built site, but are not
+  checked into the source Git repository.
+- Poly Haven grants all source maps under CC0 1.0. Use of its public API is
+  credited as requested by its API terms: **Powered by Poly Haven**.
+- Keep the complete manifest for traceable provenance and asset hashes.
