@@ -1,0 +1,67 @@
+name: Train Room-Layout Spatial Model
+
+on:
+  push:
+    branches: [feature/learned-room-layout-v11]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vitae-room-layout-training-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  train:
+    # Github Actions bot commits must not trigger a second training loop.
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout selected feature branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Sparse-clone licensed room layouts (exclude HSSD)
+        env:
+          GIT_LFS_SKIP_SMUDGE: '1'
+        run: |
+          git clone --quiet --depth 1 --sparse https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts "$RUNNER_TEMP/floorplanqa"
+          git -C "$RUNNER_TEMP/floorplanqa" sparse-checkout set layouts/bedroom layouts/kitchen layouts/living_room
+          printf 'Bedroom JSON files: '
+          find "$RUNNER_TEMP/floorplanqa/layouts/bedroom" -name '*.json' | wc -l
+      - name: Train on licensed synthetic rooms only
+        run: python scripts/train-layout-priors.py --strict --local-root "$RUNNER_TEMP/floorplanqa"
+      - name: Inspect model, held-out metrics, and source
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('model/layout-priors.json'))
+          m=json.load(open('model/layout-metrics.json'))
+          assert p['trained'] and p['group_count'] > 0
+          assert m['heldout_objects'] >= 100
+          assert m['source_records'] == 1800
+          assert m['rooms']['rooms_train'] + m['rooms']['rooms_test'] == 1800
+          print('MODEL TRAINED:',p['group_count'],'conditional categories')
+          print('DATASET SHA:',p['dataset_revision'])
+          print('HELDOUt LOG DENSITY:',m['heldout_mean_log_density'])
+          print('TRAIN ROOMS:',m['rooms']['rooms_train'])
+          print('TEST ROOMS:',m['rooms']['rooms_test'])
+          PY
+      - name: Commit learned weights and evaluation to feature branch
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add model/layout-priors.json model/layout-metrics.json
+          if ! git diff --staged --quiet; then
+            git commit -m 'ml: publish trained CC BY 4.0 room-placement prior and held-out metrics'
+            git push origin HEAD:feature/learned-room-layout-v11
+          fi

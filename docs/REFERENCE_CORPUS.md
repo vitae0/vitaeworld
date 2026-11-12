@@ -43,14 +43,82 @@ A genuinely trained interior model requires:
    for doors, stair landings, and narrow rooms.
 5. Quantized inference that will not stall a mobile browser.
 
-No shipped model currently meets those requirements. We deliberately do
-not claim that a tiny synthetic self-scored training loop would qualify.
+A **small trained conditional furniture-position model** is now shipped,
+see the V0.3 section below. A complete neural floor-graph generator and
+independent aesthetic-quality evaluation still do not exist.
 
 ## Current practical alternative
 
 Before committing to an unlicensed training set, the live prototype now
 uses quality-checked furniture arrangements and an orientation post-pass
-plus optional in-scene directional QA. These changes improve actual
-asset placement without pretending that an unsupported neural model has
-been trained. Vetted external floorplan training remains a separate,
-uncompleted milestone.
+plus optional in-scene directional QA. These changes supplement an externally trained conditional spatial model.
+Whole-building generative training is still a separate, unfinished milestone.
+
+## V0.3: Actual downloaded training data, reproducible conditional model
+
+The first trainable corpus is [FloorplanQA-Layouts](https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts).
+It is published under **CC BY 4.0** by Rodionov, Eldesokey, Birsak,
+Femiani, Ghanem and Wonka (FloorplanQA, ICML 2026).
+
+The dataset has 2,000 structured room layouts. Only the **1,800 synthetic
+bedrooms, kitchens and living rooms** are eligible for the first
+training run; the other 200 HSSD-derived samples are *explicitly excluded*
+pending any additional upstream asset review. There is no redistribution
+of individual original layout JSONs or images in our game.
+
+- Downloader: the GitHub training workflow sparse-clones the Hugging Face
+  dataset repository at a recorded commit and checks out only the three
+  synthetic `layouts/{bedroom,kitchen,living_room}` directories. The
+  trainer also supports the documented viewer `/rows` API, but the direct
+  Git source is more reproducible and avoids sporadic API 503 responses.
+- Model: three-component diagonal **Gaussian mixture** fitted by
+  expectation-maximization in plain Python. Conditioned on
+  `room category | furniture role`, predicting normalized relative
+  object centroid `x,z`.
+- Train/test split: deterministic SHA-256 room ID hash (80/20).
+  No object from a held-out room enters the corresponding train subset.
+- Artifact: `model/layout-priors.json`; report:
+  `model/layout-metrics.json`; updated from the training workflow.
+- Runtime: `src/learned-layout.js` gives a bounded bonus of at most
+  +0.24/-0.22 to legal candidate positions. Existing room boundaries,
+  doorway clearance, collision avoidance and navigation conditions
+  remain stronger.
+- This is genuinely **trained statistical machine learning**,
+  not an image-generating model or a full conditional neural architect.
+  It learns preferred placement zones, **not** window styles, room
+  connectivity or exact orientation of imported GLBs.
+- Original-data provenance:
+  https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts
+- API documentation:
+  https://huggingface.co/docs/dataset-viewer/quick_start
+
+To reproduce: `python3 scripts/train-layout-priors.py --strict` from
+the repository root with network access. The `train-layout-priors`
+GitHub Actions job performs the same calculation, commits the compact
+model/metrics files to its feature branch and publishes a CI log.
+Only that model and attribution ship to the browser.
+
+### Completed first fit: measured results
+
+- Dataset revision: `9ffb74c1c158104fa302baea8e18087d31906bcd`
+- Eligible room plans: **1,800**, synthetic only, CC BY 4.0.
+- Train/test: **1,447 / 353 distinct rooms** (SHA-256 keyed split).
+- Observed mapped furniture: **6,359 / 1,521 train/test items**.
+- Trained mixture groups: **16**.
+- Held-out average log density: **+0.07492** on the normalized unit
+  square, versus zero for a uniform distribution.
+- 11,800 other object labels were not yet mapped into canonical roles;
+  this is a deliberate initial coverage limit.
+- `model/layout-priors.json` and `model/layout-metrics.json` are
+  checked-in outputs from the actual external training run.
+- Reproduction (internet needed):
+
+  ```sh
+  git clone --depth 1 --sparse https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts /tmp/floorplanqa
+  git -C /tmp/floorplanqa sparse-checkout set layouts/bedroom layouts/kitchen layouts/living_room
+  python3 scripts/train-layout-priors.py --strict --local-root /tmp/floorplanqa
+  ```
+
+The metric measures statistical fit for source-layout object positions.
+It is **not** a measured improvement in gameplay, player preference or
+photorealism. Stronger claims require a controlled blind comparison.

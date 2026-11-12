@@ -1,0 +1,20 @@
+{
+  "dataset": "OldDelorean/FloorplanQA-Layouts",
+  "dataset_revision": "9ffb74c1c158104fa302baea8e18087d31906bcd",
+  "evaluation": "held-out 20% of distinct rooms (not individual objects)",
+  "groups": 16,
+  "heldout_mean_log_density": 0.07492,
+  "heldout_objects": 1521,
+  "min_group_training_size": 28,
+  "mixture_components": 3,
+  "rooms": {
+    "objects_test": 1521,
+    "objects_train": 6359,
+    "rooms_test": 353,
+    "rooms_train": 1447,
+    "unmapped_objects": 11800
+  },
+  "source_config": "synthetic-git-folders",
+  "source_records": 1800,
+  "uniform_mean_log_density": 0.0
+}
