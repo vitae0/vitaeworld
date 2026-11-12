@@ -223,24 +223,51 @@ function topologicalGrid(rng,style){
 }
 const rzSide=(z)=>z===0?'north':z===2?'south':'middle';
 function chooseDoors(grid,rooms,rng){
- return rooms.map(room=>{
-  const options=[];
+ // BFS on room adjacency to circulation. A parcel that cannot open directly
+ // on a corridor receives one connecting door to a room closer to the hall.
+ // This prevents otherwise impossible 2x8 parcels without sealing rooms off.
+ const neighbors=new Map(rooms.map(r=>[r.id,new Set()]));
+ const distances=new Map();
+ for(const room of rooms)for(const c of room.cells)for(const {dx,dz} of DIRS){
+  const x=c.gx+dx,z=c.gz+dz;
+  if(!inside(x,z))continue;
+  const target=grid[idx(x,z)];
+  if(target===HALL)distances.set(room.id,0);
+  else if(target>0&&target!==room.id)neighbors.get(room.id).add(target);
+ }
+ const queue=[...distances.keys()];
+ for(let at=0;at<queue.length;at++){
+  const parent=queue[at],level=distances.get(parent);
+  for(const near of neighbors.get(parent)){
+   if(!distances.has(near)){distances.set(near,level+1);queue.push(near);}
+  }
+ }
+ if(distances.size!==rooms.length)
+  throw Error('Disconnected room-to-circulation graph');
+ const doors=[];
+ for(const room of rooms){
+  const options=[],distance=distances.get(room.id);
   for(const c of room.cells)for(const {dx,dz} of DIRS){
    const nx=c.gx+dx,nz=c.gz+dz;
-   if(!inside(nx,nz)||grid[idx(nx,nz)]!==HALL)continue;
+   if(!inside(nx,nz))continue;
+   const target=grid[idx(nx,nz)];
+   const corridor=target===HALL;
+   if(!corridor && !(target>0&&distances.get(target)<distance))continue;
    const shared=DIRS.filter(d=>inside(c.gx+d.dx,c.gz+d.dz)&&
-       grid[idx(c.gx+d.dx,c.gz+d.dz)]===room.id).length;
-   const score=2*(shared>=2)+.1*rng()-
-      .18*Math.hypot(c.x-room.x,c.z-room.z);
+     grid[idx(c.gx+d.dx,c.gz+d.dz)]===room.id).length;
+   const score=3*(corridor?1:0)+.8*(shared>=2)
+      -.18*Math.hypot(c.x-room.x,c.z-room.z)+rng()*.03;
    options.push({x:c.x+dx*TILE/2,z:c.z+dz*TILE/2,
-      roomId:room.id,roomCell:{x:c.x,z:c.z},
-      hallCell:cellWorld(nx,nz),edgeKey:edgeKey(c.gx,c.gz,dx,dz),
-      axis:dx?'z':'x',dx,dz,score,side:room.side});
+     roomId:room.id,toRoomId:corridor?HALL:target,
+     roomCell:{x:c.x,z:c.z},hallCell:cellWorld(nx,nz),
+     edgeKey:edgeKey(c.gx,c.gz,dx,dz),axis:dx?'z':'x',
+     dx,dz,score,side:room.side});
   }
   options.sort((a,b)=>b.score-a.score);
-  if(!options.length)throw Error('No corridor doorway for room '+room.id);
-  return options[0];
- });
+  if(!options.length)throw Error('No connected doorway for '+room.id);
+  doors.push(options[0]);
+ }
+ return doors;
 }
 function wallsFromGrid(grid,doors){
  const out=[],doorEdges=new Set(doors.map(d=>d.edgeKey));
