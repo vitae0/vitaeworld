@@ -22,6 +22,10 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
    layer.root.visible=states[i].rooms;
    layer.floorDeck.visible=states[i].deck;
    layer.ceiling.visible=states[i].ceiling;
+   layer.detailGroup.visible=states[i].detail;
+   // All floors are geometrically present, but one active sun/ambient
+   // pair lights the entire building. Never double ambient intensity.
+   layer.setLightingActive(i===current);
   });
  }
  update();
@@ -37,7 +41,15 @@ export function buildBuildingWorld(scene,building,paletteIndex=0,onAsset=()=>{})
    return levels[item.level]?.setInteractionState(item,on)??false;
   },
   tick(dt){
-   for(const layer of levels)if(layer.root.visible)layer.tick(dt);
+   for(const layer of levels)if(layer.root.visible&&layer.detailGroup.visible)
+    layer.tick(dt);
+  },
+  getRenderReport(){
+   const states=floorVisibilityPlan(building,current,firstPerson,playerY);
+   return {allStoreysVisible:states.every(s=>s.rooms&&s.deck),
+    current,tiers:states.map(s=>s.tier),
+    full:states.filter(s=>s.detail).length,
+    shells:states.filter(s=>!s.detail).length};
   },
   setDaylight(hour){
    for(const layer of levels)layer.setDaylight(hour);
