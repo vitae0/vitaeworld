@@ -264,15 +264,13 @@ export function populateRooms(layout,seed=layout.seed){
      const galleryEnd=narrowGallery?
        -3.0*Math.abs((width<depth?p.z:p.x)-farEnd):0;
      const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd+galleryEnd;
-     // Keep the old semantic ranker as the primary authority. Prefer a
-     // usable approach to chairs, beds, cabinets and appliances only among
-     // otherwise comparable legal arrangements. No learned coordinate bias.
-     const frontage=furnitureUseFrontage(layout,room,a,p,objects);
+     // Preserve the previous semantic candidate ordering exactly.
+     // Functional standing-room checks run only for the small shortlist
+     // after all classic geometric and relationship rules have ranked it.
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+architectural+
-       (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+
-       .45*frontage+rng()*.004;
-     candidates.push({p,score,locationScore:positional,frontage});
+       (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+rng()*.004;
+     candidates.push({p,score,locationScore:positional});
     }
     if(!candidates.length)return false;
     candidates.sort((a,b)=>b.score-a.score);
@@ -284,6 +282,9 @@ export function populateRooms(layout,seed=layout.seed){
      shortlist.push(item);
      if(shortlist.length>= (mandatory?7:4))break;
     }
+    for(const item of shortlist){
+     item.frontage=furnitureUseFrontage(layout,room,a,item.p,objects);
+    }
     let chosen=shortlist[0];
     if(a.solid){
      const baseline=roomAccessibility(layout,room,objects,{resolution:2,radius:.21});
@@ -292,7 +293,8 @@ export function populateRooms(layout,seed=layout.seed){
       const nav=roomAccessibility(layout,room,
        [...objects,{...item.p,roomId:room.id,solid:true}],
        {resolution:2,radius:.21});
-      const adjusted=item.score*.25+nav.ratio*5-(nav.doorOpen?0:5);
+      const adjusted=item.score*.25+nav.ratio*5-
+        (nav.doorOpen?0:5)+item.frontage*.34;
       const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
       if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
       if(adjusted>navBest){navBest=adjusted;chosen=item;}
