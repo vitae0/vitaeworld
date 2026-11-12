@@ -16,18 +16,22 @@ export function buildDoorVisuals(root,layout,owned){
  leafs.frustumCulled=false;handles.frustumCulled=false;
  const world=new THREE.Object3D();
  const opened=new Set();
+ const progress=new Float32Array(doors.length);
+ const goals=new Float32Array(doors.length);
  const byId=new Map(doors.map((d,i)=>[d.roomId,i]));
- function matrixFor(door,open){
+ function matrixFor(door,fraction){
   const alongX=door.axis==='x';
   const hx=door.x-(alongX?leafWidth/2:0);
   const hz=door.z+(alongX?0:leafWidth/2);
-  const angle=alongX?(open?-(door.dz||1)*Math.PI/2:0):
-    (open?(door.dx>0?Math.PI:0):Math.PI/2);
+  const targetAngle=alongX?-(door.dz||1)*Math.PI/2:
+    (door.dx>0?Math.PI:0);
+  const initialAngle=alongX?0:Math.PI/2;
+  const angle=initialAngle+(targetAngle-initialAngle)*fraction;
   const vx=Math.cos(angle),vz=-Math.sin(angle);
   return {x:hx+vx*leafWidth/2,z:hz+vz*leafWidth/2,angle,vx,vz};
  }
  function updateOne(i){
-  const door=doors[i],pose=matrixFor(door,opened.has(door.roomId));
+  const door=doors[i],pose=matrixFor(door,progress[i]);
   world.position.set(pose.x,1.28,pose.z);
   world.rotation.set(0,pose.angle,0);
   world.scale.set(leafWidth,2.30,.055);
@@ -45,10 +49,22 @@ export function buildDoorVisuals(root,layout,owned){
   setOpen(roomId,isOpen){
    const i=byId.get(roomId);if(i===undefined)return false;
    if(isOpen)opened.add(roomId);else opened.delete(roomId);
-   updateOne(i);
-   leafs.instanceMatrix.needsUpdate=true;
-   handles.instanceMatrix.needsUpdate=true;
+   goals[i]=isOpen?1:0;
    return true;
+  },
+  update(dt){
+   let changed=false;
+   const move=Math.min(1,Math.max(0,dt)*4.8);
+   for(let i=0;i<doors.length;i++){
+    if(Math.abs(progress[i]-goals[i])<.0001)continue;
+    progress[i]+=Math.sign(goals[i]-progress[i])*
+      Math.min(move,Math.abs(goals[i]-progress[i]));
+    updateOne(i);changed=true;
+   }
+   if(changed){
+    leafs.instanceMatrix.needsUpdate=true;
+    handles.instanceMatrix.needsUpdate=true;
+   }
   },
   getOpen(roomId){return opened.has(roomId);}
  };
