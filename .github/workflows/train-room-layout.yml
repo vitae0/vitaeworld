@@ -29,8 +29,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Download licensed room-layout data and train model
-        run: python scripts/train-layout-priors.py --strict
+      - name: Sparse-clone licensed room layouts (exclude HSSD)
+        env:
+          GIT_LFS_SKIP_SMUDGE: '1'
+        run: |
+          git clone --quiet --depth 1 --sparse https://huggingface.co/datasets/OldDelorean/FloorplanQA-Layouts "$RUNNER_TEMP/floorplanqa"
+          git -C "$RUNNER_TEMP/floorplanqa" sparse-checkout set layouts/bedroom layouts/kitchen layouts/living_room
+          printf 'Bedroom JSON files: '
+          find "$RUNNER_TEMP/floorplanqa/layouts/bedroom" -name '*.json' | wc -l
+      - name: Train on licensed synthetic rooms only
+        run: python scripts/train-layout-priors.py --strict --local-root "$RUNNER_TEMP/floorplanqa"
       - name: Inspect model, held-out metrics, and source
         run: |
           python - <<'PY'
@@ -39,8 +47,8 @@ jobs:
           m=json.load(open('model/layout-metrics.json'))
           assert p['trained'] and p['group_count'] > 0
           assert m['heldout_objects'] >= 100
-          assert m['source_records'] == 2000
-          assert m['rooms']['excluded_non_synthetic'] >= 200
+          assert m['source_records'] == 1800
+          assert m['rooms']['rooms_train'] + m['rooms']['rooms_test'] == 1800
           print('MODEL TRAINED:',p['group_count'],'conditional categories')
           print('DATASET SHA:',p['dataset_revision'])
           print('HELDOUt LOG DENSITY:',m['heldout_mean_log_density'])
