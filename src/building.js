@@ -7,6 +7,8 @@ import {generateDecorations} from './decor.js';
 import {sealExteriorDoor} from './topology.js';
 import {resolveBuildingProgram} from './building-programs.js';
 import {resolveInteriorStyle} from './style-families.js';
+import {generateWallFeatures,wallFeatureReport} from './wall-features.js';
+import {roomGenerationReport} from './room-archetypes.js';
 
 export function generateBuilding(seed='vitae-001',type='auto',count=2,programId='auto',styleId='auto'){
  const floors=Math.max(1,Math.min(2,Math.floor(count)||2));
@@ -32,6 +34,9 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2,programId=
   layout.decorations=generateDecorations(layout,
     (story.index===0?String(seed):String(seed)+'::upper')+'::all-spaces');
   layout.qualityReport.decorations=layout.decorations.length;
+  layout.wallFeatures=generateWallFeatures(layout);
+  layout.styleReport={...roomGenerationReport(layout),
+   wallTreatments:wallFeatureReport(layout)};
  }
  const rooms=stories.flatMap(s=>s.layout.rooms.map(r=>({
   ...r,storey:s.index,globalId:s.index+':'+r.id
