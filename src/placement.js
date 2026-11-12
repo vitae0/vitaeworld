@@ -5,6 +5,7 @@ import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from '.
 import {polishFurnitureOrientations} from './orientation-pass.js';
 import {blocksWindow,furnitureUseFrontage} from './placement-constraints.js';
 import {ensembleBonus,summarizeCompositions} from './room-ensembles.js';
+import {archetypePlacementBonus} from './room-archetypes.js';
 
 
 // Room identity constrains optional furnishing. Shared traits such as "modern"
@@ -297,8 +298,9 @@ export function populateRooms(layout,seed=layout.seed){
       // Group compositions are tie breakers, never permission to cross a
       // doorway or override classic semantic candidate ordering.
       const ensemble=ensembleBonus(room,a,item.p,objects);
+      const archetype=archetypePlacementBonus(room,a,item.p,objects);
       const adjusted=item.score*.25+nav.ratio*5-
-        (nav.doorOpen?0:5)+item.frontage*.34+ensemble;
+        (nav.doorOpen?0:5)+item.frontage*.34+ensemble+archetype*.6;
       const floor=Math.min(.84,Math.max(.70,baseline.ratio-.05));
       if(!mandatory && (!nav.doorOpen||nav.ratio<floor))continue;
       if(adjusted>navBest){navBest=adjusted;chosen=item;}
