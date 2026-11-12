@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {PROCEDURAL_SURFACES,proceduralSurfaceColor} from './procedural-surfaces.js';
 
 // Procedural texture is the offline fallback. In deployed builds, the CC0
 // Poly Haven maps downloaded by scripts/sync-textures.mjs replace it.
@@ -7,7 +8,8 @@ const ASSET={plaster:'white_plaster_02',wood:'wood_planks',
  tile:'tiled_floor_001',fabric:'fabric_pattern_05',
  oak:'laminate_floor_02',marble:'marble_tiles',
  terracotta:'terracotta_floor_tiles',brick:'brick_wall_07',
- paintedPlaster:'painted_plaster_wall',concrete:'concrete_floor'};
+ paintedPlaster:'painted_plaster_wall',concrete:'concrete_floor',
+ ...Object.fromEntries(PROCEDURAL_SURFACES.map(kind=>[kind,null]))};
 let manifestPromise;
 function manifest(){
  if(!manifestPromise){
@@ -26,7 +28,9 @@ function fallbackMap(kind){
  for(let y=0;y<256;y++)for(let x=0;x<256;x++){
   const n=hash(x>>1,y>>1)*13-6.5;
   let r,g,b;
-  if(kind==='wood'||kind==='oak'){
+  const procedural=proceduralSurfaceColor(kind,x,y);
+  if(procedural){[r,g,b]=procedural;
+  }else if(kind==='wood'||kind==='oak'){
    const plank=Math.floor(y/48),grain=(Math.sin(x*.12+Math.sin(y*.06)*2)+Math.sin(x*.33+y*.11))*.5;
    const groove=y%48<=2||x%256<2&&plank%2===0?-45:0;
    const shade=grain*9+n+groove+(plank%2?7:-7);
@@ -77,7 +81,7 @@ function configure(texture,srgb){
 }
 export function createSurfaceMaterial(kind,owned,{tint=0xffffff,
  roughness=.85,metalness=0}={}){
- if(!ASSET[kind])throw Error('Unrecognized surface: '+kind);
+ if(!Object.hasOwn(ASSET,kind))throw Error('Unrecognized surface: '+kind);
  const defaultMap=fallbackMap(kind);
  const mat=new THREE.MeshStandardMaterial({color:tint,map:defaultMap,
   roughness,metalness});
@@ -86,7 +90,7 @@ export function createSurfaceMaterial(kind,owned,{tint=0xffffff,
  const originalDispose=mat.dispose.bind(mat);
  mat.dispose=()=>{disposed=true;originalDispose();};
  manifest().then(async data=>{
-  if(!data||disposed)return;
+  if(!data||disposed||!ASSET[kind])return;
   const records=(data.assets||[]).filter(r=>r.asset===ASSET[kind]);
   const get=type=>records.find(r=>r.map===type)?.file;
   for(const [role,type] of [['map','Diffuse'],['normalMap','Normal'],['roughnessMap','Rough']]){

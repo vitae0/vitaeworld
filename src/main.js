@@ -7,6 +7,7 @@ import {buildBuildingWorld} from './building-world.js';
 import {CHARACTERS,addCharacter,modelLoadMetrics} from './assets.js';
 import {recipeFromQuery,recipeQuery} from './scene-recipe.js';
 import {worldStateKey,parseSavedStates,serialiseSavedStates} from './world-persistence.js';
+import {STYLE_FAMILIES,STYLE_FAMILY_IDS} from './style-families.js';
 import {Controller} from './controls.js';
 import {initPanels} from './ui-panels.js';
 import {createInteractionSystem} from './interactions.js';
@@ -15,6 +16,12 @@ import {daylightAt,normalizeHour} from './daylight.js';
 const $=(selector)=>document.querySelector(selector);
 const canvas=$('#scene');
 const buildingUse=$('#buildingUse');
+const interiorSelect=$('#interiorStyle');
+for(const id of STYLE_FAMILY_IDS){
+ const style=STYLE_FAMILIES[id],option=document.createElement('option');
+ option.value=id;option.textContent=style.label.toUpperCase();
+ interiorSelect.append(option);
+}
 buildingUse.replaceChildren();
 const categoryNames={
  konut:'KONUTLAR',ticaret:'TİCARİ MEKÂNLAR',
@@ -35,6 +42,7 @@ for(const category of PROGRAM_CATEGORIES){
 const initialRecipe=recipeFromQuery(window.location.search);
 buildingUse.value=initialRecipe.program;
 $('#buildingStyle').value=initialRecipe.style;
+interiorSelect.value=initialRecipe.interior;
 initPanels({
  settingsPanel:$('#settingsPanel'),mapPanel:$('#mapPanel'),
  settingsToggle:$('#toggleSettings'),mapToggle:$('#toggleMap'),
@@ -53,12 +61,13 @@ scene.background=new THREE.Color(0x08151d);
 scene.fog=new THREE.Fog(0x08151d,26,80);
 const camera=new THREE.PerspectiveCamera(70,1,0.08,110);
 let seed=initialRecipe.seed,paletteIndex=0,characterIndex=0,
-    buildingStyle=initialRecipe.style,buildingProgram=initialRecipe.program;
+    buildingStyle=initialRecipe.style,buildingProgram=initialRecipe.program,
+    interiorStyleId=initialRecipe.interior;
 let building=null,layout=null;
 let world=null,controller=null,avatar=null,shownLevel=0;
 let interactions=null,selectedInteraction=null,interactionFrames=0;
 let totalAssets=0,loadedAssets=0,failedAssets=0,generationId=0;
-const recipe=()=>({seed,style:buildingStyle,program:buildingProgram});
+const recipe=()=>({seed,style:buildingStyle,program:buildingProgram,interior:interiorStyleId});
 function readWorldState(){
  try{return parseSavedStates(localStorage.getItem(worldStateKey(recipe())));}
  catch{return {};}
@@ -123,11 +132,10 @@ function createAvatar(){
 }
 function generate(nextSeed){
  seed=String(nextSeed).trim().slice(0,80)||'vitae-001';
- const query=recipeQuery({seed,style:buildingStyle,program:buildingProgram},
-  window.location.search);
+ const query=recipeQuery(recipe(),window.location.search);
  if(window.history?.replaceState)
   window.history.replaceState(null,'',window.location.pathname+query);
- building=generateBuilding(seed,buildingStyle,2,buildingProgram);
+ building=generateBuilding(seed,buildingStyle,2,buildingProgram,interiorStyleId);
  layout=building.stories[0].layout;shownLevel=0;
  const generation=++generationId;
  world?.dispose();
@@ -160,6 +168,13 @@ function generate(nextSeed){
  $('#layoutStatus').textContent=layout.buildingType.toUpperCase();
  $('#buildingName').textContent=(building.programLabel+' · '+layout.buildingName).toUpperCase();
  $('#paletteName').textContent=world.paletteName.toUpperCase();
+ const styles=building.stories.map(s=>s.layout.styleReport);
+ $('#layoutStatus').textContent=
+  layout.buildingType.toUpperCase()+' · '+layout.interiorStyle.label.toUpperCase();
+ const styleStatus=$('#styleStatistics');
+ if(styleStatus)styleStatus.textContent=styles.reduce((n,s)=>n+s.wallTreatments.total,0)+
+  ' DUVAR DETAYI · '+styles.reduce((n,s)=>n+s.completedEnsembles,0)+
+  ' ODA GRUBU · TÜM KATLAR AÇIK';
  updateProgress();
  drawMap();
 }
@@ -192,6 +207,10 @@ buildingUse.addEventListener('change',e=>{
  buildingProgram=e.currentTarget.value;
  generate(seed);
 });
+interiorSelect.addEventListener('change',e=>{
+ interiorStyleId=e.currentTarget.value;
+ generate(seed);
+});
 $('#buildingStyle').addEventListener('change',e=>{
  buildingStyle=e.currentTarget.value;
  generate(seed);
@@ -205,8 +224,7 @@ $('#resetObjects').addEventListener('click',()=>{
 });
 $('#shareWorld').addEventListener('click',async()=>{
  const link=window.location.origin+window.location.pathname+
-  recipeQuery({seed,style:buildingStyle,program:buildingProgram},
-   window.location.search);
+  recipeQuery(recipe(),window.location.search);
  const label=$('#shareWorld span');
  try{
   await navigator.clipboard.writeText(link);

@@ -9,6 +9,7 @@ import {createSurfaceMaterial} from './materials.js';
 import {addWindowVisuals} from './window-visuals.js';
 import {daylightAt} from './daylight.js';
 import {stairwellRimSegments} from './floor-visibility.js';
+import {addWallFeatureVisuals} from './wall-feature-visuals.js';
 
 const PALETTES=[
  {name:'Aurora',wall:0xe9ded0,trim:0x725b4d,floor:0xa28e7b,hall:0x777067,light:0xffdbaa},
@@ -16,7 +17,12 @@ const PALETTES=[
  {name:'Solstice',wall:0xe5e4d8,trim:0x586c5b,floor:0x9aa08c,hall:0x747e71,light:0xffe5ba}
 ];
 export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}) {
- const palette=PALETTES[paletteIndex%PALETTES.length];
+ const style=layout.interiorStyle||null;
+ const basePalette=PALETTES[paletteIndex%PALETTES.length];
+ const palette=style?{...basePalette,name:style.label,
+  wall:['charcoalPanel','rawConcrete','darkBrick'].includes(style.wall)?
+   0xb3b4b3:0xeae7e2,
+  trim:style.accent,light:style.light}:basePalette;
  const root=new THREE.Group();root.name='ProceduralBuilding';
  scene.add(root);
  // Keep the upstairs floor slab independently renderable from downstairs.
@@ -25,6 +31,8 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  const detachedFloor=Boolean(options.detachedFloor);
  (detachedFloor?scene:root).add(floorDeck);
  const ceiling=new THREE.Group();ceiling.name='CeilingOcclusionLayer';root.add(ceiling);
+ const detailGroup=new THREE.Group();detailGroup.name='DetailedInteriorProps';
+ root.add(detailGroup);
  const owned=new Set();
  const tmp=new THREE.Object3D();
  const color=(n)=>new THREE.Color(n);
@@ -44,12 +52,18 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  const wallSurface=finish==='brick'?'brick':
   finish==='concrete'?'concrete':
   finish==='terracotta'?'paintedPlaster':'plaster';
- const floorWoodMat=createSurfaceMaterial(drySurface,owned,{roughness:.79});
- const floorTileMat=createSurfaceMaterial(wetSurface,owned,{roughness:.73});
- const ceilingMat=createSurfaceMaterial('plaster',owned,{tint:0xece5db});
- const wallMat=createSurfaceMaterial(wallSurface,owned);
- const trimMat=createSurfaceMaterial(finish==='brick'?'oak':'wood',owned,
-  {tint:palette.trim,roughness:.68});
+ const floorWoodMat=createSurfaceMaterial(style?.floor||drySurface,owned,
+  {roughness:style?.id==='sleek'?.38:.79,metalness:style?.metal||0});
+ const floorTileMat=createSurfaceMaterial(style?.wet||wetSurface,owned,
+  {roughness:style?.id==='sleek'?.33:.73});
+ const ceilingMat=createSurfaceMaterial(style?.ceiling||'plaster',owned,
+  {tint:style?0xffffff:0xece5db});
+ const wallMat=createSurfaceMaterial(style?.wall||wallSurface,owned,
+  {roughness:.87});
+ const trimMat=createSurfaceMaterial(style?.trim||
+  (finish==='brick'?'oak':'wood'),owned,
+  {tint:style?0xffffff:palette.trim,roughness:.68,
+   metalness:style?.metal||0});
  const textileMat=createSurfaceMaterial('fabric',owned,{roughness:.95});
  const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:.80});
  // Tile in wet/service rooms, timber in living and circulation areas.
@@ -65,7 +79,8 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
   if(!cells.length)continue;
   const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),
    family==='tile'?floorTileMat:floorWoodMat,cells.length);
-  floors.name='PBRFloor_'+family+'_'+(family==='tile'?wetSurface:drySurface);floors.frustumCulled=false;
+  floors.name='PBRFloor_'+family+'_'+(family==='tile'?
+   style?.wet||wetSurface:style?.floor||drySurface);floors.frustumCulled=false;
   cells.forEach((tile,i)=>{
    tmp.position.set(tile.x,0,tile.z);tmp.rotation.set(0,0,0);
    tmp.scale.set(1,1,1);tmp.updateMatrix();
@@ -121,6 +136,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  wallMesh.instanceMatrix.needsUpdate=true;
  if(wallMesh.instanceColor)wallMesh.instanceColor.needsUpdate=true;
  root.add(wallMesh);
+ addWallFeatureVisuals(root,layout,owned);
  // Window glass uses actual openings cut from the solid exterior walls.
  // Rendered as four instanced batches with shared low-poly trim.
  addWindowVisuals(root,layout,owned);
@@ -184,10 +200,10 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  });
  highlightsMesh.instanceMatrix.needsUpdate=true;
  if(highlightsMesh.instanceColor)highlightsMesh.instanceColor.needsUpdate=true;
- root.add(highlightsMesh);
+ detailGroup.add(highlightsMesh);
  // Theme-consistent art, shelves and tabletop details share four GPU batches.
- addModelledDecor(root,layout.decorations||[],owned,{textileMat});
- const hemi=new THREE.HemisphereLight(0xfff2e5,0x716b65,1.65);root.add(hemi);
+ addModelledDecor(detailGroup,layout.decorations||[],owned,{textileMat});
+ const hemi=new THREE.HemisphereLight(style?.light||0xfff2e5,0x716b65,1.65);root.add(hemi);
  const sun=new THREE.DirectionalLight(0xffefe1,1.30);
  sun.position.set(-11,17,3);root.add(sun);
  function setDaylight(hour){
@@ -202,17 +218,19 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{},options={}
  }
  setDaylight(14);
  const doors=buildDoorVisuals(root,layout,owned);
- const items=new THREE.Group();items.name='SemanticFurniture';root.add(items);
+ const items=new THREE.Group();items.name='SemanticFurniture';detailGroup.add(items);
  const holders=new Map();
  for(const p of layout.props)holders.set(p.id,addFurniture(items,p,owned,onAsset));
  const propStates=buildInteractivePropVisuals(holders,layout.props,owned);
  // Explicit opt-in diagnostic. Never show helper arrows in normal gameplay.
  if(typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('qaFacing'))
-  addFacingDebug(root,layout,owned);
+  addFacingDebug(detailGroup,layout,owned);
  let disposed=false;
  return {
-  root,floorDeck,detachedFloor,ceiling,colors:palette,paletteName:palette.name,
+  root,floorDeck,detachedFloor,ceiling,detailGroup,
+  colors:palette,paletteName:palette.name,
   setDaylight,
+  setLightingActive(value){hemi.visible=Boolean(value);sun.visible=Boolean(value);},
   setFirstPerson(isFirst){ceiling.visible=isFirst;},
   tick(dt){doors.update(dt);propStates.update(dt);},
   setInteractionState(item,on){

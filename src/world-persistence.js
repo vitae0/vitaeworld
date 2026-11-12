@@ -4,7 +4,7 @@ import {normalizeRecipe} from './scene-recipe.js';
 export function worldStateKey(recipe){
  const r=normalizeRecipe(recipe);
  return 'vitaeworld:v1:state:'+encodeURIComponent(r.program)+'/'+
-  encodeURIComponent(r.style)+'/'+encodeURIComponent(r.seed);
+  encodeURIComponent(r.style)+'/'+encodeURIComponent(r.interior)+'/'+encodeURIComponent(r.seed);
 }
 export function parseSavedStates(text){
  if(typeof text!=='string'||text.length>60000)return {};
