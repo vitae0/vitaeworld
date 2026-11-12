@@ -31,7 +31,9 @@ function chooseFile(manifest,aliases){
   if(!variants)continue;
   for(const type of ['jpg','jpeg']){
    const file=variants[type];
-   if(file?.url?.startsWith('https://cdn.polyhaven.com/')&&
+   if(file?.url&&
+      (file.url.startsWith('https://dl.polyhaven.org/')||
+       file.url.startsWith('https://cdn.polyhaven.com/'))&&
       (!file.size||file.size<=3_000_000))return file.url;
   }
  }
