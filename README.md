@@ -1,4 +1,4 @@
-# VitaeWorld | Architecture Lab 09
+# VitaeWorld | Architecture Lab 10
 
 Playable browser-first 3D procedural interiors project, separate from previous Vitae Hotel tests.
 
@@ -25,6 +25,43 @@ The floor plan uses a 25×19 occupancy grid of 1.26m cells. Room splitting valid
 61 CC0 furniture models use editable **40D function vectors** to decide *what fits a room* and **16D placement vectors** to decide *where it belongs*. Relational constraints pair chairs with tables, seating with screens, bedside lamps with tables, and electronics with desks. Candidate direction is now evaluated on all four cardinal angles for directional centre furniture, with a separate score for looking toward a relevant object.
 
 A new `src/orientation.js` defines the canonical world-facing vector as **-Z**. Imported Kenney GLBs can use another local facing axis, so `src/assets.js` applies a model-native compensation in a child transform, keeping the computed placement yaw, collision footprints and minimap aligned. Per-model correction hooks are intentionally centralized. **The +Z asset-front baseline is an assumption requiring visual validation against the original meshes**, not a claim that every one of the 61 models has been individually audited.
+
+## Lab 10 — Actual CC0 fixture meshes and furniture-direction QA
+
+The scene now uses **20 additional real Kenney furniture variants**, such
+as alternate sofas/chairs, benches, storage, sinks, kitchen appliances,
+coffee tables, a doormat and updated stools. The source catalog at the
+**exact revision already pinned in `src/assets.js`** contains all 81
+referenced furniture models; no asset names are guessed.
+
+Three more verified Kenney models drive wall/ceiling lighting:
+`lampwall`, `lampsquareceiling` and `ceilingfan`.
+`src/fixture-assets.js` groups identical fixtures into actual
+`THREE.InstancedMesh` draw calls, caches GLBs and preserves the previous
+procedural lamps whenever a fetch fails. Large custom chandeliers,
+track lights and pendant designs retain procedural geometry rather
+than being falsely identified as one of these GLBs.
+
+**Final facing pass:** `src/orientation-pass.js` finds nearest semantic
+partners (sofa/TV, dining chair/table, desk chair/desk) and considers
+cardinal rotations after all furniture has been placed. A change is
+accepted *only* when the entire rotated rectangle stays inside its
+room, neither connecting door is obstructed, other meshes do not
+intersect, and navigability remains at least 0.82. The per-layout
+`orientationReport` captures which models improved.
+
+**Manual visual QA:** open
+`https://vitae0.github.io/vitaeworld/?qaFacing=1` to show direction
+arrows in the actual 3D scene. Green indicates a prop whose direction
+was corrected toward a semantic partner; amber indicates other
+directional models that should be visually audited against their GLB
+front axis. This debug overlay is opt-in and costs no draw calls in
+normal gameplay.
+
+`tests/asset-composition.test.mjs` checks the new catalogue, fixture
+selection and post-placement collision/navigation invariants. Tests
+cannot establish each artist's native GLB front without actual mesh
+visual inspection.
 
 ## Lab 09 — Orthogonal interiors and complete visual-material passes
 
@@ -198,7 +235,7 @@ npm run build
 
 ## Modules
 
-- `src/topology.js` — five independently selectable architectural grammars, corridor graphs, room division, doorway selection, 45° walls.
+- `src/topology.js` — five independently selectable architectural grammars, corridor graphs, 5:3 room division and orthogonal doorways.
 - `src/semantics.js` — 40D room and furniture features and 16D spatial preferences.
 - `src/placement.js` — candidate positions, actual-room occupancy checks, companion targets, facing constraints and collision checks.
 - `src/orientation.js` — yaw and facing conventions plus asset-space compensation.
@@ -212,4 +249,4 @@ More implementation details are in [Architecture](docs/ARCHITECTURE.md) and exte
 
 ## Unfinished areas
 
-The room footprints remain cell-based, with a limited number of true 45° corners. GLB model orientation needs in-browser visual inspection for any asset-native exceptions. This is not a complete navigation mesh or collision physics engine; multi-storey buildings, interaction systems, assets packaged locally, exterior city blocks and multiplayer remain future work.
+The footprints remain grid-based and the collision system is not a complete rigid-body physics engine. Two connected storeys are playable; deeper stair stacks, interaction systems, fully local bundled assets, the exterior city, network multiplayer and actual-browser visual QA remain future work.
