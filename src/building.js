@@ -4,6 +4,7 @@ import {generateLayout} from './layout.js';
 import {promoteCorridors} from './circulation.js';
 import {chooseStaircase,STOREY_HEIGHT} from './stairs.js';
 import {generateDecorations} from './decor.js';
+import {sealExteriorDoor} from './topology.js';
 import {resolveBuildingProgram} from './building-programs.js';
 
 export function generateBuilding(seed='vitae-001',type='auto',count=2,programId='auto'){
@@ -22,6 +23,7 @@ export function generateBuilding(seed='vitae-001',type='auto',count=2,programId=
  const stairCells=stairs.flatMap(s=>s.cells);
  for(const story of stories){
   const layout=story.layout;
+  if(story.index>0)sealExteriorDoor(layout);
   promoteCorridors(layout,story.index,stairCells);
   // The private rooms are furnished first. Corridor decoration is allowed,
   // but solid hallway furniture is intentionally absent to preserve exits.
