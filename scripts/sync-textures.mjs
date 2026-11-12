@@ -6,7 +6,11 @@ import {mkdir,writeFile,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 
-const ASSETS=['white_plaster_02','wood_planks','tiled_floor_001','fabric_pattern_05'];
+const ASSETS=[
+ 'white_plaster_02','wood_planks','tiled_floor_001','fabric_pattern_05',
+ 'laminate_floor_02','marble_tiles','terracotta_floor_tiles',
+ 'brick_wall_07','painted_plaster_wall','concrete_floor'
+];
 const KINDS=[
  {name:'Diffuse',aliases:['diffuse','col','col_01','albedo','basecolor']},
  {name:'Normal',aliases:['nor_gl','normal_gl','normalgl']},
