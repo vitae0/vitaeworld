@@ -3,7 +3,7 @@ import {TILE,GRID_W,GRID_H,seededRandom,worldCell} from './topology.js';
 import {CARDINAL_YAWS,DIRECTIONAL_ROLES,cardinalToward,facingScore} from './orientation.js';
 import {footprintOverlap,volumeOverlap,roomAccessibility,collisionPairs} from './interior-quality.js';
 import {polishFurnitureOrientations} from './orientation-pass.js';
-import {blocksWindow} from './placement-constraints.js';
+import {blocksWindow,furnitureUseFrontage} from './placement-constraints.js';
 
 
 // Room identity constrains optional furnishing. Shared traits such as "modern"
@@ -264,11 +264,15 @@ export function populateRooms(layout,seed=layout.seed){
      const galleryEnd=narrowGallery?
        -3.0*Math.abs((width<depth?p.z:p.x)-farEnd):0;
      const architectural=(longLounge?(endWall?5.2:-1.0):0)+workEnd+galleryEnd;
+     // Keep the old semantic ranker as the primary authority. Prefer a
+     // usable approach to chairs, beds, cabinets and appliances only among
+     // otherwise comparable legal arrangements. No learned coordinate bias.
+     const frontage=furnitureUseFrontage(layout,room,a,p,objects);
      const score=3.1*positional+1.45*companionFit+
        (directional?.95*face:0)+architectural+
        (p.kind==='group'?.3:0)+(p.kind===a.anchor?.15:0)+
-       rng()*.004;
-     candidates.push({p,score,locationScore:positional});
+       .45*frontage+rng()*.004;
+     candidates.push({p,score,locationScore:positional,frontage});
     }
     if(!candidates.length)return false;
     candidates.sort((a,b)=>b.score-a.score);
@@ -300,7 +304,9 @@ export function populateRooms(layout,seed=layout.seed){
      modelW:a.w,modelD:a.d,h:a.h,angle:best.angle,
      solid:a.solid,roomId:room.id,role:a.role,
      semanticScore:+semantic.toFixed(3),locationScore:+best.locationScore.toFixed(3),
-     mandatory,y:.1,faceTarget:objects.find(q=>q.role===companion(a))?.id??null};
+     mandatory,y:.1,
+     useFrontage:+chosen.frontage.toFixed(3),
+     faceTarget:objects.find(q=>q.role===companion(a))?.id??null};
    }
    spec.id=room.id+'-'+placed.length;
    placed.push(spec);objects.push(spec);
@@ -382,7 +388,7 @@ export function populateRooms(layout,seed=layout.seed){
  // Restore the pre-training semantic heuristic as the *active* placer.
  // The fitted dataset and model remain in the repository for offline
  // experiments but cannot override the proven earlier placement behaviour.
- layout.placementMethod='semantic-rules-v2';
+ layout.placementMethod='semantic-rules-v2-access';
  layout.orientationReport=polishFurnitureOrientations(layout);
  layout.obstacles=[...layout.obstacles.filter(o=>o.kind!=='furniture'),
    ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))];
