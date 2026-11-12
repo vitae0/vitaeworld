@@ -26,7 +26,7 @@ function room(name,color,traits,required,capacity=8) {
 }
 // The six chosen room types vary by seed. The pool of ten is extensible.
 export const ROOM_TYPES=Object.freeze({
- // Circulation is a room family, not an anonymous empty tile category.
+ // Circulation shares the same room schema and thematic decor vocabulary.
  corridor:Object.freeze({...room('Passage Gallery','#cab8a0',
    {openness:3,social:2,illumination:3,display:2,compact:2,quiet:1},[],0),circulation:true}),
  lobby:Object.freeze({...room('Welcome Lobby','#d4bea5',
@@ -93,7 +93,7 @@ const ROLE_LOCATION={
  bed:{perimeter:3,deep:3,privacy:3,quiet:3,clearance:2},
  sidetable:{perimeter:3,deep:2,cluster:3,surface:1,quiet:2},
  lighting:{perimeter:2,corner:2,deep:1,cluster:2,quiet:1},
- sofa:{perimeter:3,focal:3,cluster:2,view:3,social:1},
+ sofa:{perimeter:3,focal:3,cluster:2,view:3,public:2},
  chair:{perimeter:2,corner:2,cluster:2,quiet:1,view:2},
  coffee:{central:3,cluster:3,focal:2,public:2},
  rug:{central:3,cluster:3,public:2,clearance:1},
@@ -112,7 +112,7 @@ const ROLE_LOCATION={
  sink:{perimeter:3,cluster:2,clearance:3},
  kitchenTool:{surface:3,cluster:3},
  counter:{perimeter:3,cluster:3,public:2},
- diningTable:{central:3,cluster:3,social:2,clearance:2},
+ diningTable:{central:3,cluster:3,public:3,clearance:2},
  diningChair:{central:2,cluster:3,focal:3,view:3,public:2},
  bath:{perimeter:3,corner:2,deep:3,privacy:3,quiet:3},
  mirror:{perimeter:3,surface:3,cluster:3},
