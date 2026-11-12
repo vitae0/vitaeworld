@@ -26,11 +26,22 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
   owned.add(m);return m;
  }
  function geometry(w,h,d){const g=new THREE.BoxGeometry(w,h,d);owned.add(g);return g;}
- const floorWoodMat=createSurfaceMaterial('wood',owned,{roughness:.79});
- const floorTileMat=createSurfaceMaterial('tile',owned,{roughness:.73});
+ const finish=layout.buildingProgram?.material||'timber';
+ const drySurface=({
+  timber:'wood',oak:'oak',marble:'marble',terracotta:'terracotta',
+  tile:'tile',concrete:'concrete',brick:'oak'
+ })[finish]||'wood';
+ const wetSurface=finish==='marble'?'marble':
+  finish==='terracotta'?'terracotta':'tile';
+ const wallSurface=finish==='brick'?'brick':
+  finish==='concrete'?'concrete':
+  finish==='terracotta'?'paintedPlaster':'plaster';
+ const floorWoodMat=createSurfaceMaterial(drySurface,owned,{roughness:.79});
+ const floorTileMat=createSurfaceMaterial(wetSurface,owned,{roughness:.73});
  const ceilingMat=createSurfaceMaterial('plaster',owned,{tint:0xece5db});
- const wallMat=createSurfaceMaterial('plaster',owned);
- const trimMat=createSurfaceMaterial('wood',owned,{tint:palette.trim,roughness:.68});
+ const wallMat=createSurfaceMaterial(wallSurface,owned);
+ const trimMat=createSurfaceMaterial(finish==='brick'?'oak':'wood',owned,
+  {tint:palette.trim,roughness:.68});
  const textileMat=createSurfaceMaterial('fabric',owned,{roughness:.95});
  const emissive=material(0xffffff,{emissive:palette.light,emissiveIntensity:.80});
  // Tile in wet/service rooms, timber in living and circulation areas.
@@ -46,7 +57,7 @@ export function buildWorld(scene,layout,paletteIndex=0,onAsset=()=>{}) {
   if(!cells.length)continue;
   const floors=new THREE.InstancedMesh(geometry(TILE+.012,.18,TILE+.012),
    family==='tile'?floorTileMat:floorWoodMat,cells.length);
-  floors.name='PBRFloor_'+family;floors.frustumCulled=false;
+  floors.name='PBRFloor_'+family+'_'+(family==='tile'?wetSurface:drySurface);floors.frustumCulled=false;
   cells.forEach((tile,i)=>{
    tmp.position.set(tile.x,0,tile.z);tmp.rotation.set(0,0,0);
    tmp.scale.set(1,1,1);tmp.updateMatrix();
