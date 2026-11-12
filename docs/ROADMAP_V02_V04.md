@@ -92,3 +92,15 @@ IK eşleştirmesi, uzun süreli durum saklama ve güvenilir cihaz
   gökyüzü, sis ve ortam ışığı birbirine bağlı.
 - **Açık:** Gerçek zamanlı ışık-gölge projeksiyonları, hacimsel gün ışığı,
   tüm cephe için mimari kör değerlendirme ve gerçek telefon FPS testi.
+
+## Lab 15 — Semantik yerleşime dönüş ve üst kat zemini
+
+- Kullanıcı tercihi doğrultusunda eğitilmiş konum bonusu kapatıldı;
+  eski semantik/ilişkisel yerleşim puanlayıcısı yeniden varsayılan.
+- Gerçek pencerenin önüne uzun dolap / ekran yerleştirilmesi
+  fiziksel kural ile önleniyor.
+- Alt kattayken üst katın zemin döşemesi, merdiven boşluklarıyla birlikte
+  renderlanıyor. Üst kat duvarları ve mobilyaları gizli kaldığından
+  gereksiz draw call yükü eklenmiyor.
+- Eğitilmiş model parametreleri karşılaştırmalı araştırma için depoda
+  tutuluyor; kullanıcı onayı olmadan tekrar etkinleşmeyecek.
