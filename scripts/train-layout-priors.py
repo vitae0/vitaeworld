@@ -18,6 +18,7 @@ import math
 import pathlib
 import random
 import statistics
+import subprocess
 import time
 import urllib.error
 import urllib.parse
@@ -113,6 +114,42 @@ def fetch_rows(limit: int, strict: bool) -> tuple[list[dict], str, str]:
     except RuntimeError:
         pass
     return all_rows, config, revision
+
+
+def load_local_rows(root_path: str, strict: bool) -> tuple[list[dict], str, str]:
+    """Use only the three synthetic subsets of an actual HF repository clone.
+
+    No HSSD-derived JSON is opened, retained or used for training.
+    """
+    repo = pathlib.Path(root_path).resolve()
+    base = repo / "layouts" if (repo / "layouts").exists() else repo
+    records = []
+    by_type = {}
+    for kind in sorted(ALLOWED):
+        directory = base / kind
+        if not directory.is_dir():
+            raise RuntimeError("Missing synthetic dataset folder: " + str(directory))
+        files = sorted(directory.rglob("*.json"))
+        by_type[kind] = len(files)
+        if strict and len(files) != 600:
+            raise RuntimeError("Expected exactly 600 " + kind +
+                               " source files; got " + str(len(files)))
+        for file in files:
+            payload = json.loads(file.read_text(encoding="utf8"))
+            if not isinstance(payload, dict):
+                raise RuntimeError("Invalid room record: " + str(file))
+            record = dict(payload)
+            record["room_type"] = kind
+            # IDs from different room folders can overlap; prefix each one.
+            record["layout_id"] = file.relative_to(base).as_posix()
+            records.append(record)
+    if strict and len(records) != 1800:
+        raise RuntimeError("Unexpected synthetic corpus size: " + str(len(records)))
+    revision = subprocess.check_output(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+    print("Local licensed dataset:", by_type,
+          "revision:", revision, flush=True)
+    return records, "synthetic-git-folders", revision
 
 
 def bbox(points: list[dict]) -> tuple[float, float, float, float] | None:
@@ -269,8 +306,10 @@ def main():
     ap.add_argument("--metrics", default="model/layout-metrics.json")
     ap.add_argument("--limit", type=int, default=2000)
     ap.add_argument("--strict", action="store_true")
+    ap.add_argument("--local-root", help="Path to checked-out HF dataset repo")
     args = ap.parse_args()
-    rows, config, revision = fetch_rows(args.limit, args.strict)
+    rows, config, revision = (load_local_rows(args.local_root, args.strict)
+        if args.local_root else fetch_rows(args.limit, args.strict))
     groups, metrics = train(rows)
     output = {
         "version": 1,
