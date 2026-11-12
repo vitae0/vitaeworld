@@ -9,7 +9,7 @@ const NAMES=Object.freeze({
  wellness:'SPA',utility:'SERVİS',corridor:'KORİDOR',
  lobby:'LOBİ',landing:'KAT'
 });
-export function generateRoomSignage(layout){
+export function generateRoomSignage(layout,floor=0){
  const rooms=new Map(layout.rooms.map(r=>[r.id,r]));
  const isHotel=['konaklama'].includes(layout.buildingProgram?.category);
  const signs=[];
@@ -23,7 +23,7 @@ export function generateRoomSignage(layout){
    (hall.x>=door.x?Math.PI/2:-Math.PI/2);
   const category=NAMES[room.type]||'ODA';
   const label=room.type==='bath'?'WC':
-   isHotel&&room.type==='suite'?'ODA '+String(room.id).padStart(3,'0'):
+   isHotel&&room.type==='suite'?'ODA '+String(floor+1)+String(room.id).padStart(2,'0'):
    category+' '+String(room.id).padStart(2,'0');
   // Mounted on solid lintel 25 cm above door top.
   const normal=alongX?{x:0,z:Math.cos(facing)}:
