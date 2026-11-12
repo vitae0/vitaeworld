@@ -323,7 +323,8 @@ function chooseExteriorDoor(grid,footprint,rng){
  return winner;
 }
 function wallsFromGrid(grid,doors,exteriorDoor){
- const out=[],doorEdges=new Set([...doors.map(d=>d.edgeKey),exteriorDoor.edgeKey]);
+ const out=[],doorEdges=new Set([...doors.map(d=>d.edgeKey),
+   ...(exteriorDoor?[exteriorDoor.edgeKey]:[])]);
  function wall(x,z,w,d,kind='wall',height=WALL_HEIGHT,y=.10+height/2,angle=0){
   out.push({x,z,w,d,kind,height,y,angle});
  }
@@ -355,6 +356,19 @@ function wallsFromGrid(grid,doors,exteriorDoor){
   }
  }
  return out;
+}
+// Multi-storey buildings have a single street entrance at ground level.
+// Upper floors get a complete exterior wall instead of a door leading to
+// empty air. Keep original private-room doors and all the floor plan data.
+export function sealExteriorDoor(layout){
+ if(!layout.exteriorDoor)return layout;
+ layout.exteriorDoor=null;
+ layout.walls=wallsFromGrid(layout.grid,layout.doors,null);
+ layout.obstacles=[
+  ...layout.walls.filter(w=>w.kind==='wall').map(w=>({...w})),
+  ...layout.props.filter(p=>p.solid).map(p=>({...p,kind:'furniture'}))
+ ];
+ return layout;
 }
 function pointBoxDistance(x,z,o){
  const cx=clamp(x,o.x-o.w/2,o.x+o.w/2),
