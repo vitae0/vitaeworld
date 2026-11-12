@@ -27,6 +27,9 @@
   HSSD kökenli 200 plan ilk eğitimden hariç.
 - Öğrenilen ilk model: oda türü ve nesne türüne koşullu,
   2B mobilya konumlarının Gauss karışımı (`model/layout-priors.json`).
+- **Durum (12 Kasım 2026):** İlk model gerçekten eğitildi; 1.800 sentetik
+  plandan 16 kategorilik karışım ve bağımsız test metrikleri oluşturuldu.
+  Tam bina grafı modeli ile görsel kalite doğrulaması henüz açık.
 - 80/20 *oda-planı bazlı* train/test ayrımı; normalleştirilmiş,
   bina planına taşınabilir `x,z` konum öncülleri.
 - Öğrenilen puanlar kural tabanlı yerleştirmeye **yumuşak ipucu**
