@@ -188,3 +188,12 @@ button,input{font:inherit}button{cursor:pointer;user-select:none;touch-action:ma
 @media(max-width:450px){
  .objectActionButton #objectName{max-width:85px}
 }
+
+/* Lab 13: independent usage programme (36 choices) and geometry selection. */
+#buildingUse{width:100%;pointer-events:auto;display:block;padding:11px 10px;
+ background:#102734;color:#dff4ed;border:1px solid #456672;border-radius:7px;
+ font-size:11px;letter-spacing:.4px;font-weight:700;outline:none;cursor:pointer}
+#buildingUse:focus-visible{border-color:#a6f9d9;outline:2px solid rgba(151,250,215,.3)}
+#buildingUse optgroup{color:#afddce;background:#09232d;font-weight:700}
+#buildingUse option{color:#f2fff6;background:#102734}
+@media(max-width:800px){#buildingUse{min-height:44px;font-size:12px}}
