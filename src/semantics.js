@@ -26,6 +26,9 @@ function room(name,color,traits,required,capacity=8) {
 }
 // The six chosen room types vary by seed. The pool of ten is extensible.
 export const ROOM_TYPES=Object.freeze({
+ // Very small orthogonal parcels become utility alcoves, never bedrooms.
+ utility:Object.freeze({...room('Utility Alcove','#d4ccbd',
+  {storage:3,compact:3,quiet:2,illumination:2,hard:1},['coatrackstanding'],3),micro:true}),
  // Circulation shares the same room schema and thematic decor vocabulary.
  corridor:Object.freeze({...room('Passage Gallery','#cab8a0',
    {openness:3,social:2,illumination:3,display:2,compact:2,quiet:1},[],0),circulation:true}),
