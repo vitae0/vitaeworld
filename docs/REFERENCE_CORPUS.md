@@ -45,3 +45,12 @@ A genuinely trained interior model requires:
 
 No shipped model currently meets those requirements. We deliberately do
 not claim that a tiny synthetic self-scored training loop would qualify.
+
+## Current practical alternative
+
+Before committing to an unlicensed training set, the live prototype now
+uses quality-checked furniture arrangements and an orientation post-pass
+plus optional in-scene directional QA. These changes improve actual
+asset placement without pretending that an unsupported neural model has
+been trained. Vetted external floorplan training remains a separate,
+uncompleted milestone.
