@@ -7,9 +7,13 @@ import {generateDecorations} from './decor.js';
 
 export function generateBuilding(seed='vitae-001',type='auto',count=2){
  const floors=Math.max(1,Math.min(2,Math.floor(count)||2));
+ const ground=generateLayout(String(seed),type);
+ // Auto architecture must be decided once for the entire building. Different
+ // storeys can have different room divisions, but the corridor spines align.
+ const chosenStyle=ground.buildingType;
  const stories=Array.from({length:floors},(_,index)=>({
   index,elevation:index*STOREY_HEIGHT,
-  layout:generateLayout(index===0?String(seed):String(seed)+'::upper',type)
+  layout:index===0?ground:generateLayout(String(seed)+'::upper',chosenStyle)
  }));
  const stairs=chooseStaircase(stories);
  const stairCells=stairs.flatMap(s=>s.cells);
