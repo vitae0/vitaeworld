@@ -82,9 +82,13 @@ def fetch_rows(limit: int, strict: bool) -> tuple[list[dict], str, str]:
         raise RuntimeError("No published train split for " + DATASET)
     config = next((s.get("config") for s in train_splits
                    if s.get("config") == "default"), train_splits[0]["config"])
-    total = next((s.get("num_rows") for s in train_splits
-                  if s.get("config") == config), None)
-    if not isinstance(total, int) or total < 1000:
+    # The Hugging Face /splits schema does not guarantee a num_rows
+    # member. The dataset's published card currently lists 2,000 records.
+    # Verify the actual 20 fetched pages and their row counts below.
+    reported = next((s.get("num_rows") or s.get("num_examples")
+                     for s in train_splits if s.get("config") == config), None)
+    total = int(reported) if reported is not None else 2000
+    if total < 1000 or total > 2500:
         raise RuntimeError("Unexpected dataset size: " + str(total))
     num = min(limit, total)
     all_rows: list[dict] = []
